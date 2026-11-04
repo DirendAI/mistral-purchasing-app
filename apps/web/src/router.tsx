@@ -32,7 +32,12 @@ export const getRouter = () => {
       context.appName = dehydrated.appName;
     },
     ...scrollRestorationOptions,
-    defaultNotFoundComponent: () => <p className="p-8">Not found.</p>,
+    defaultNotFoundComponent: () => (
+      <div className="flex min-h-full flex-col items-center justify-center gap-1 p-8 text-center">
+        <p className="text-2xl font-semibold tracking-tight">Page not found</p>
+        <p className="text-sm text-gray-500">The page you are looking for does not exist.</p>
+      </div>
+    ),
     Wrap: ({ children }) => (
       <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
     ),

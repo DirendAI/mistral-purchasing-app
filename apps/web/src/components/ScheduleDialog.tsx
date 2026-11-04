@@ -7,9 +7,7 @@ import {
   usePutSchedule,
   type ProductOut,
 } from "../api/purchasing";
-
-const inputClass =
-  "w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-gray-500 focus:outline-none";
+import { Button, Dialog, errorBoxClass, inputClass } from "./ui";
 
 type Mode = "hourly" | "daily" | "weekly" | "interval" | "cron";
 
@@ -115,13 +113,8 @@ export const ScheduleDialog = ({ product, onClose }: { product: ProductOut; onCl
   const error = putSchedule.error ?? deleteSchedule.error;
 
   return (
-    <div className="fixed inset-0 z-10 flex items-center justify-center bg-black/40 p-4">
-      <form
-        onSubmit={submit}
-        className="flex w-full max-w-md flex-col gap-3 rounded-lg bg-white p-6 shadow-xl"
-      >
-        <h2 className="text-lg font-semibold">Research schedule — {product.name}</h2>
-
+    <Dialog title={`Research schedule — ${product.name}`} onClose={onClose} panelClass="max-w-md">
+      <form onSubmit={submit} className="flex flex-col gap-3">
         <div className="grid grid-cols-2 gap-2 text-sm">
           {(
             [
@@ -134,8 +127,8 @@ export const ScheduleDialog = ({ product, onClose }: { product: ProductOut; onCl
           ).map(([value, label]) => (
             <label
               key={value}
-              className={`flex cursor-pointer items-center gap-2 rounded border px-3 py-2 ${
-                mode === value ? "border-black bg-gray-50 font-medium" : "border-gray-300"
+              className={`flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 transition-colors ${
+                mode === value ? "border-brand bg-brand-soft font-medium" : "border-gray-300 hover:bg-gray-50"
               }`}
             >
               <input
@@ -217,30 +210,30 @@ export const ScheduleDialog = ({ product, onClose }: { product: ProductOut; onCl
           <input type="checkbox" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} />
           Enabled (paused when off)
         </label>
-        {error && <p className="text-sm text-red-600">{error.message}</p>}
-        <div className="flex justify-between">
-          <button
+        {error && (
+          <div role="alert" className={errorBoxClass}>
+            {error.message}
+          </div>
+        )}
+        <div className="flex justify-between pt-1">
+          <Button
             type="button"
+            variant="danger"
             disabled={deleteSchedule.isPending || !schedule}
             onClick={() => deleteSchedule.mutate(undefined, { onSuccess: onClose })}
-            className="rounded border border-red-300 px-3 py-2 text-sm text-red-700 disabled:opacity-50"
           >
             Remove schedule
-          </button>
+          </Button>
           <div className="flex gap-2">
-            <button type="button" onClick={onClose} className="rounded border border-gray-300 px-4 py-2 text-sm">
+            <Button type="button" variant="secondary" onClick={onClose}>
               Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={putSchedule.isPending}
-              className="rounded bg-black px-4 py-2 text-sm text-white disabled:opacity-50"
-            >
+            </Button>
+            <Button type="submit" variant="primary" disabled={putSchedule.isPending}>
               Save
-            </button>
+            </Button>
           </div>
         </div>
       </form>
-    </div>
+    </Dialog>
   );
 };

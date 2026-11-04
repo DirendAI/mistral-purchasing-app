@@ -4,9 +4,7 @@ import type { FormEvent } from "react";
 
 import { useSaveSettings, useSettings } from "../api/purchasing";
 import { AppShell } from "../components/AppShell";
-
-const inputClass =
-  "w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-gray-500 focus:outline-none";
+import { Button, errorBoxClass, inputClass } from "../components/ui";
 
 const SettingsPage = () => {
   const { data: settings, isLoading, error } = useSettings();
@@ -45,13 +43,17 @@ const SettingsPage = () => {
 
   return (
     <AppShell>
-      <h1 className="text-2xl font-semibold">Settings</h1>
+      <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
       <p className="mt-1 text-sm text-gray-600">
         Price research looks for stores near this location, within the given distance.
       </p>
 
       {isLoading && <p className="mt-6 text-gray-500">Loading…</p>}
-      {error && <p className="mt-6 text-red-600">{error.message}</p>}
+      {error && (
+        <div role="alert" className={`mt-6 ${errorBoxClass}`}>
+          {error.message}
+        </div>
+      )}
 
       <form onSubmit={submit} className="mt-6 flex max-w-lg flex-col gap-3">
         <label className="flex flex-col gap-1 text-sm">
@@ -66,11 +68,23 @@ const SettingsPage = () => {
         <div className="flex gap-3">
           <label className="flex flex-1 flex-col gap-1 text-sm">
             <span className="font-medium">Latitude (optional)</span>
-            <input className={inputClass} value={latitude} onChange={(e) => setLatitude(e.target.value)} inputMode="decimal" placeholder="52.52" />
+            <input
+              className={inputClass}
+              value={latitude}
+              onChange={(e) => setLatitude(e.target.value)}
+              inputMode="decimal"
+              placeholder="52.52"
+            />
           </label>
           <label className="flex flex-1 flex-col gap-1 text-sm">
             <span className="font-medium">Longitude (optional)</span>
-            <input className={inputClass} value={longitude} onChange={(e) => setLongitude(e.target.value)} inputMode="decimal" placeholder="13.405" />
+            <input
+              className={inputClass}
+              value={longitude}
+              onChange={(e) => setLongitude(e.target.value)}
+              inputMode="decimal"
+              placeholder="13.405"
+            />
           </label>
         </div>
         <div className="flex gap-3">
@@ -89,16 +103,16 @@ const SettingsPage = () => {
             <input className={inputClass} value={currency} onChange={(e) => setCurrency(e.target.value)} maxLength={8} />
           </label>
         </div>
-        {saveSettings.error && <p className="text-sm text-red-600">{saveSettings.error.message}</p>}
-        <div className="flex items-center gap-3">
-          <button
-            type="submit"
-            disabled={saveSettings.isPending}
-            className="rounded bg-black px-4 py-2 text-sm text-white disabled:opacity-50"
-          >
+        {saveSettings.error && (
+          <div role="alert" className={errorBoxClass}>
+            {saveSettings.error.message}
+          </div>
+        )}
+        <div className="flex items-center gap-3 pt-1">
+          <Button type="submit" variant="primary" className="px-4 py-2" disabled={saveSettings.isPending}>
             {saveSettings.isPending ? "Saving…" : "Save settings"}
-          </button>
-          {saved && <span className="text-sm text-green-700">Saved.</span>}
+          </Button>
+          {saved && <span className="text-sm font-medium text-green-700">✓ Saved</span>}
         </div>
       </form>
     </AppShell>
