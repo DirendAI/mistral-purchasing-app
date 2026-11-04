@@ -11,6 +11,7 @@ import {
 } from "../../api/purchasing";
 import type { ResearchRunOut } from "../../api/generated";
 import { AppShell } from "../../components/AppShell";
+import { EditProductDialog } from "../../components/EditProductDialog";
 import { PriceHistoryChart, type PricePoint } from "../../components/PriceHistoryChart";
 import { ScheduleDialog } from "../../components/ScheduleDialog";
 import { Button, StatusBadge, TargetBadge, errorBoxClass } from "../../components/ui";
@@ -96,6 +97,7 @@ const ProductDetailPage = () => {
   const triggerResearch = useTriggerResearch();
   const deleteProduct = useDeleteProduct();
   const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
 
   const runs = runsQuery.data ?? [];
   const points: PricePoint[] = [...runs]
@@ -168,6 +170,9 @@ const ProductDetailPage = () => {
               >
                 {runs[0]?.status === "running" ? "Running…" : triggerResearch.isPending ? "Starting…" : "Research now"}
               </Button>
+              <Button variant="secondary" className="px-4 py-2" onClick={() => setEditOpen(true)}>
+                Edit
+              </Button>
               <Button variant="secondary" className="px-4 py-2" onClick={() => setScheduleOpen(true)}>
                 Schedule
               </Button>
@@ -212,6 +217,7 @@ const ProductDetailPage = () => {
             </div>
           </section>
 
+          {editOpen && <EditProductDialog product={product as ProductOut} onClose={() => setEditOpen(false)} />}
           {scheduleOpen && <ScheduleDialog product={product as ProductOut} onClose={() => setScheduleOpen(false)} />}
         </>
       )}
