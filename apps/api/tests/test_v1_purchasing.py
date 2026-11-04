@@ -62,6 +62,7 @@ def _run(product_id: uuid.UUID, **overrides) -> SimpleNamespace:
         "best_store": "Store A",
         "target_met": True,
         "error": None,
+        "details": None,
         "started_at": NOW,
         "finished_at": NOW,
     }

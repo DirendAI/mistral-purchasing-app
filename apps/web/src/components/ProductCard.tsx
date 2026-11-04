@@ -101,6 +101,14 @@ export const ProductCard = ({
                 {expanded ? "Hide" : "Show"} {run.findings.length} finding(s)
               </button>
             )}
+            {expanded && run.details && (
+              <details className="mt-2 text-xs">
+                <summary className="cursor-pointer underline">Raw researcher notes</summary>
+                <pre className="mt-1 max-h-48 overflow-auto whitespace-pre-wrap rounded bg-gray-100 p-2">
+                  {run.details}
+                </pre>
+              </details>
+            )}
             {expanded && run.findings && (
               <ul className="mt-2 flex flex-col gap-1 text-xs">
                 {run.findings.map((finding) => (

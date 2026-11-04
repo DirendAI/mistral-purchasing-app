@@ -535,6 +535,17 @@
             ],
             "title": "Best Store"
           },
+          "details": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Details"
+          },
           "error": {
             "anyOf": [
               {

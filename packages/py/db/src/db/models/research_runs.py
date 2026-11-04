@@ -30,5 +30,6 @@ class ResearchRun(SQLModel, table=True):
     best_store: str | None = Field(default=None, max_length=200)
     target_met: bool | None = Field(default=None)
     error: str | None = Field(default=None)
+    details: str | None = Field(default=None)
     started_at: datetime = Field(default_factory=_utcnow)
     finished_at: datetime | None = Field(default=None)

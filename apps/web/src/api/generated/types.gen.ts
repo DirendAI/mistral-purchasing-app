@@ -243,6 +243,10 @@ export type ResearchRunOut = {
      */
     best_store?: string | null;
     /**
+     * Details
+     */
+    details?: string | null;
+    /**
      * Error
      */
     error?: string | null;

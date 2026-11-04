@@ -18,7 +18,6 @@ from mistralai.workflows.plugins.mistralai import (
     RemoteSession,
     Runner,
     SystemMessage,
-    TextChunk,
     UserMessage,
     chat_parse_to_model,
     mistralai_chat_complete,
@@ -153,6 +152,7 @@ async def save_results(
     outcome: dict[str, Any],
     target_price: float | None,
     default_currency: str | None,
+    raw_output: str,
 ) -> dict[str, Any]:
     import uuid
     from decimal import Decimal
@@ -187,6 +187,7 @@ async def save_results(
             best_price=best["price"] if best is not None else None,
             best_store=best["store_name"] if best is not None else None,
             target_met=target_met,
+            details=raw_output[:8000],
         )
     return {
         "best_price": float(best["price"]) if best is not None else None,
@@ -204,6 +205,15 @@ async def fail_run(run_id: str, error: str) -> None:
 
     async with get_session_maker()() as session:
         await run_accessors.finish_run(session, uuid.UUID(run_id), status="failed", error=error[:2000])
+
+
+def _outputs_to_text(outputs: Any) -> str:
+    """All agent outputs as text: final text chunks plus any other chunk (tool calls, errors)."""
+    parts: list[str] = []
+    for output in outputs:
+        text = getattr(output, "text", None)
+        parts.append(text if isinstance(text, str) and text else str(output))
+    return "\n".join(part for part in parts if part and part != "None")
 
 
 def _research_task(context: dict[str, Any]) -> str:
@@ -272,7 +282,7 @@ class PriceResearchWorkflow:
                 tools=[{"type": "web_search"}],
             )
             outputs = await Runner.run(agent=agent, inputs=task, session=RemoteSession(), max_turns=12)
-            raw = "\n".join(str(output.text) for output in outputs if isinstance(output, TextChunk))
+            raw = _outputs_to_text(outputs)
             outcome = await chat_parse_to_model(
                 ResearchOutcome,
                 ChatCompletionRequest(
@@ -289,6 +299,7 @@ class PriceResearchWorkflow:
                 outcome.model_dump(),
                 context["target_price"],
                 context.get("currency") or context.get("default_currency"),
+                raw,
             )
             return PriceResearchResult(
                 run_id=run_id,

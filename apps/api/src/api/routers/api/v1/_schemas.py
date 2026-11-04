@@ -43,6 +43,7 @@ class ResearchRunOut(BaseModel):
     best_store: str | None = None
     target_met: bool | None = None
     error: str | None = None
+    details: str | None = None
     started_at: datetime
     finished_at: datetime | None = None
     findings: list[FindingOut] = Field(default_factory=list)
@@ -141,6 +142,7 @@ async def run_out(session: AsyncSession, run: ResearchRun) -> ResearchRunOut:
         best_store=run.best_store,
         target_met=run.target_met,
         error=run.error,
+        details=run.details,
         started_at=run.started_at,
         finished_at=run.finished_at,
         findings=[finding_out(f) for f in findings],

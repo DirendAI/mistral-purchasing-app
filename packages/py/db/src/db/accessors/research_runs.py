@@ -41,6 +41,7 @@ async def finish_run(
     best_store: str | None = None,
     target_met: bool | None = None,
     error: str | None = None,
+    details: str | None = None,
 ) -> ResearchRun | None:
     statement = select(ResearchRun).where(ResearchRun.id == run_id)
     run = (await session.execute(statement)).scalar_one_or_none()
@@ -52,6 +53,8 @@ async def finish_run(
     run.best_store = best_store
     run.target_met = target_met
     run.error = error
+    if details is not None:
+        run.details = details
     run.finished_at = datetime.now(timezone.utc)
     await session.commit()
     await session.refresh(run)
