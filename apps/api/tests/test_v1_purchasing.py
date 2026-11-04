@@ -120,6 +120,29 @@ def test_whoami_lives_under_beta_users_on_the_sdk_client() -> None:
     assert hasattr(client.beta.users, "whoami_async")
 
 
+async def test_resolve_principal_id_passes_the_gateway_token_as_bearer_security(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """whoami_async requires an explicit `security`; the gateway token must be sent as the bearer."""
+    import api.routers.api.v1._auth as auth
+
+    captured: dict = {}
+
+    class _Users:
+        async def whoami_async(self, *, security):
+            captured["security"] = security
+            return SimpleNamespace(principal=SimpleNamespace(principal_type="user", id="u1"))
+
+    class _Client:
+        beta = SimpleNamespace(users=_Users())
+
+    monkeypatch.setattr(auth, "caller_mistral_client", lambda: _Client())
+    auth._principal_ids.clear()
+    user_id = await auth._resolve_principal_id("tok-123")
+    assert user_id == "user:u1"
+    assert captured["security"].bearer_user_context_auth == "tok-123"
+
+
 def test_v1_routes_require_a_caller(anon_client: TestClient) -> None:
     product_id = uuid.uuid4()
     for method, path in [

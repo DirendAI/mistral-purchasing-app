@@ -11,6 +11,7 @@ from collections import OrderedDict
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, status
+from mistralai.client.models import UsersAPIWhoamiSecurity
 from mistralai_capabilities.apps.tokens import current_token
 from utils.mistral import caller_mistral_client
 
@@ -25,7 +26,11 @@ async def _resolve_principal_id(token: str) -> str:
     if cached is not None:
         _principal_ids.move_to_end(key)
         return cached
-    principal = (await caller_mistral_client().beta.users.whoami_async()).principal
+    # whoami takes its credential explicitly: the gateway token as the bearer scheme.
+    whoami = await caller_mistral_client().beta.users.whoami_async(
+        security=UsersAPIWhoamiSecurity(bearer_user_context_auth=token)
+    )
+    principal = whoami.principal
     principal_id = getattr(principal, "id", None)
     resolved = f"{principal.principal_type}:{principal_id}" if principal_id is not None else f"token:{key}"
     _principal_ids[key] = resolved
