@@ -66,6 +66,20 @@ mistral deploy
 
 Set `MISTRAL_API_KEY` in the app's **Secrets** tab in Studio on the modules that need it.
 
+## Troubleshooting research runs
+
+The `price-research` workflow uses a durable agent with Mistral's built-in `web_search` tool
+(`Agent(tools=[WebSearchTool()])` + `Runner`/`RemoteSession`), executed server-side by the platform.
+If a run completes but finds no prices:
+
+1. Check the run in the UI (expand the product card → "Raw researcher notes"): `research_runs.details`
+   holds the agent's raw output, so you can see whether the search tool was called and what it returned.
+2. Check the worker module's logs in Studio and its **Secrets** tab: the worker needs
+   `MISTRAL_API_KEY` (its own service identity runs the model calls; scheduled runs never resolve
+   user-scope credentials). Without it, runs fail with `Authentication failed` / WF errors.
+3. Web search is a built-in tool, not a connector — no connector credentials are needed, but the
+   organization/workspace must allow the built-in web search tool.
+
 ## Checks
 
 ```bash
