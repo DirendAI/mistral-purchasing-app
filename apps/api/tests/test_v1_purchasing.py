@@ -507,3 +507,64 @@ def test_get_schedule_404_when_absent(client: TestClient, monkeypatch: pytest.Mo
     monkeypatch.setattr(product_accessors, "get_product", fake_get)
     monkeypatch.setattr(schedule_accessors, "get_schedule", fake_get_row)
     assert client.get(f"/api/v1/products/{product.id}/schedule").status_code == 404
+
+
+def _sdk_error(status: int, body: str) -> Exception:
+    import httpx
+    from mistralai.client.errors import SDKError
+
+    response = httpx.Response(status, content=body.encode(), headers={"content-type": "application/json"})
+    return SDKError("API error occurred", response, body)
+
+
+async def _no_sleep(_seconds: float) -> None:
+    return None
+
+
+async def test_start_research_retries_until_the_workflow_is_registered(monkeypatch: pytest.MonkeyPatch) -> None:
+    import api.routers.api.v1._research as research
+
+    calls: list = []
+
+    async def fake_start(_cls, workflow_input, *, wait_for_result):
+        calls.append(workflow_input)
+        if len(calls) < 3:
+            raise _sdk_error(404, '{"detail":"Workflow not found","code":"WF_1100"}')
+        return SimpleNamespace(execution_id="exec-9")
+
+    monkeypatch.setattr(research, "start_workflow", fake_start)
+    monkeypatch.setattr(research, "_sleep", _no_sleep)
+    product_id = uuid.uuid4()
+    execution_id = await research.start_research(product_id, USER)
+    assert execution_id == "exec-9"
+    assert len(calls) == 3
+    assert calls[0].product_id == str(product_id)
+    assert calls[0].trigger == "manual"
+
+
+async def test_start_research_503_when_the_workflow_never_registers(monkeypatch: pytest.MonkeyPatch) -> None:
+    import api.routers.api.v1._research as research
+    from fastapi import HTTPException
+
+    async def fake_start(_cls, _input, *, wait_for_result):
+        raise _sdk_error(404, '{"detail":"Workflow not found","code":"WF_1100"}')
+
+    monkeypatch.setattr(research, "start_workflow", fake_start)
+    monkeypatch.setattr(research, "_sleep", _no_sleep)
+    with pytest.raises(HTTPException) as excinfo:
+        await research.start_research(uuid.uuid4(), USER)
+    assert excinfo.value.status_code == 503
+
+
+async def test_start_research_502_on_non_registration_errors(monkeypatch: pytest.MonkeyPatch) -> None:
+    import api.routers.api.v1._research as research
+    from fastapi import HTTPException
+
+    async def fake_start(_cls, _input, *, wait_for_result):
+        raise _sdk_error(500, '{"detail":"boom"}')
+
+    monkeypatch.setattr(research, "start_workflow", fake_start)
+    monkeypatch.setattr(research, "_sleep", _no_sleep)
+    with pytest.raises(HTTPException) as excinfo:
+        await research.start_research(uuid.uuid4(), USER)
+    assert excinfo.value.status_code == 502
