@@ -25,6 +25,7 @@ class FindingOut(BaseModel):
     product_url: str | None = None
     title: str | None = None
     price: float | None = None
+    original_price: float | None = None
     currency: str | None = None
     in_stock: bool | None = None
     distance_km: float | None = None
@@ -121,6 +122,7 @@ def finding_out(row: PriceFinding) -> FindingOut:
         product_url=row.product_url,
         title=row.title,
         price=_price(row.price),
+        original_price=_price(row.original_price),
         currency=row.currency,
         in_stock=row.in_stock,
         distance_km=row.distance_km,

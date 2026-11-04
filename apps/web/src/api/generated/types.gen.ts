@@ -89,6 +89,10 @@ export type FindingOut = {
      */
     notes?: string | null;
     /**
+     * Original Price
+     */
+    original_price?: number | null;
+    /**
      * Price
      */
     price?: number | null;

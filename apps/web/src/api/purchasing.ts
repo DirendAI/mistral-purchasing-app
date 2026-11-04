@@ -16,11 +16,24 @@ import {
 import type {
   BodyCreateProduct,
   ProductOut,
+  ResearchRunOut,
   ScheduleIn,
   ScheduleOut,
   SettingsIn,
 } from "./generated";
 import { dataOr404, unwrap } from "./unwrap";
+
+export const runsKey = (productId: string) => ["research-runs", productId] as const;
+
+/** A placeholder run shown immediately when a research is triggered, until the worker creates the real row. */
+const pendingRun = (productId: string): ResearchRunOut => ({
+  id: "pending",
+  product_id: productId,
+  trigger: "manual",
+  status: "running",
+  started_at: new Date().toISOString(),
+  findings: [],
+});
 
 export const productsKey = ["products"] as const;
 export const settingsKey = ["settings"] as const;
@@ -46,7 +59,7 @@ export const useProduct = (productId: string) =>
 
 export const useResearchRuns = (productId: string) =>
   useQuery({
-    queryKey: ["research-runs", productId],
+    queryKey: runsKey(productId),
     queryFn: () =>
       unwrap(listResearchRuns({ path: { product_id: productId }, query: { limit: 100 }, throwOnError: true })),
     // Keep polling while the latest run is still going.
@@ -88,7 +101,15 @@ export const useTriggerResearch = () => {
   return useMutation({
     mutationFn: (productId: string) =>
       unwrap(triggerResearch({ path: { product_id: productId }, throwOnError: true })),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: productsKey }),
+    onSuccess: (_data, productId) => {
+      // Show the run as "running" immediately instead of waiting for the next poll.
+      queryClient.setQueryData<ProductOut[]>(productsKey, (products) =>
+        products?.map((p) => (p.id === productId ? { ...p, latest_run: pendingRun(productId) } : p))
+      );
+      queryClient.setQueryData<ResearchRunOut[]>(runsKey(productId), (runs) => [pendingRun(productId), ...(runs ?? [])]);
+      queryClient.invalidateQueries({ queryKey: productsKey });
+      queryClient.invalidateQueries({ queryKey: runsKey(productId) });
+    },
   });
 };
 

@@ -22,6 +22,7 @@ class PriceFinding(SQLModel, table=True):
     product_url: str | None = Field(default=None, max_length=2048)
     title: str | None = Field(default=None, max_length=500)
     price: Decimal | None = Field(default=None, sa_column=Column(Numeric(12, 2)))
+    original_price: Decimal | None = Field(default=None, sa_column=Column(Numeric(12, 2)))
     currency: str | None = Field(default=None, max_length=8)
     in_stock: bool | None = Field(default=None)
     distance_km: float | None = Field(default=None)

@@ -129,6 +129,9 @@ export const ProductCard = ({
                     <div className="flex justify-between gap-2">
                       <span className="font-medium">{finding.store_name}</span>
                       <span>
+                        {finding.original_price != null && finding.original_price > (finding.price ?? 0) && (
+                          <s className="mr-1 text-gray-400">{fmtPrice(finding.original_price, finding.currency)}</s>
+                        )}
                         {fmtPrice(finding.price, finding.currency)}
                         {finding.in_stock === false ? " · out of stock" : ""}
                         {finding.distance_km != null ? ` · ${finding.distance_km} km` : ""}
@@ -152,10 +155,10 @@ export const ProductCard = ({
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <button
           onClick={guard(() => triggerResearch.mutate(product.id))}
-          disabled={triggerResearch.isPending}
+          disabled={triggerResearch.isPending || run?.status === "running"}
           className="rounded bg-black px-3 py-1.5 text-white disabled:opacity-50"
         >
-          {triggerResearch.isPending ? "Starting…" : "Research now"}
+          {run?.status === "running" ? "Running…" : triggerResearch.isPending ? "Starting…" : "Research now"}
         </button>
         <button
           onClick={guard(() => onSchedule(product))}

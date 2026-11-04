@@ -188,6 +188,17 @@
             ],
             "title": "Notes"
           },
+          "original_price": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Original Price"
+          },
           "price": {
             "anyOf": [
               {

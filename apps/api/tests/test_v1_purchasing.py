@@ -295,7 +295,7 @@ def test_get_product_includes_latest_run_and_schedule(client: TestClient, monkey
         return schedule
 
     async def fake_findings(session, run_id):
-        return [SimpleNamespace(id=uuid.uuid4(), store_name="Store A", product_url="https://a.example", title="t", price=299.0, currency="EUR", in_stock=True, distance_km=2.5, notes=None, found_at=NOW)]
+        return [SimpleNamespace(id=uuid.uuid4(), store_name="Store A", product_url="https://a.example", title="t", price=299.0, original_price=349.0, currency="EUR", in_stock=True, distance_km=2.5, notes=None, found_at=NOW)]
 
     monkeypatch.setattr(product_accessors, "get_product", fake_get)
     monkeypatch.setattr(product_accessors, "latest_run", fake_latest_run)

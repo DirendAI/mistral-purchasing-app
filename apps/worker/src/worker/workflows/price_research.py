@@ -40,6 +40,7 @@ class Finding(BaseModel):
     product_url: str | None = None
     title: str | None = None
     price: float | None = None
+    original_price: float | None = None
     currency: str | None = None
     in_stock: bool | None = None
     distance_km: float | None = None
@@ -167,6 +168,7 @@ async def save_results(
             "product_url": finding.get("product_url"),
             "title": finding.get("title"),
             "price": Decimal(str(finding["price"])) if finding.get("price") is not None else None,
+            "original_price": Decimal(str(finding["original_price"])) if finding.get("original_price") is not None else None,
             "currency": finding.get("currency") or default_currency,
             "in_stock": finding.get("in_stock"),
             "distance_km": finding.get("distance_km"),
@@ -248,15 +250,23 @@ _RESEARCHER_INSTRUCTIONS = (
     "You are a price researcher. Use web search to find current prices for the exact product the user "
     "asks about, in stores near the user's location (online stores that ship there, and physical stores "
     "within the given distance). Always ground every price in a search result or page you actually opened; "
-    "include the store name and the product page URL for each offer. Never invent prices. When you are "
-    "done, summarize every offer you found, cheapest first, one per line: "
-    "'STORE | price CURRENCY | in stock: yes/no | distance: X km | URL | note'."
+    "include the store name and the product page URL for each offer. Never invent prices. "
+    "PRICE ACCURACY: report the effective price a buyer actually pays after all visible discounts, sale "
+    "prices, coupons and promo codes. If a page shows a struck-through original price next to a lower "
+    "sale price, the sale price is the price and the struck-through one is the original. Prefer the price "
+    "on the product page over a search snippet. If the real price is not clearly visible (login required, "
+    "'contact us', dynamic pricing), set the price to null and explain in the note. "
+    "When you are done, summarize every offer you found, cheapest first, one per line: "
+    "'STORE | price CURRENCY | original CURRENCY | in stock: yes/no | distance: X km | URL | note'."
 )
 
 _PARSE_SYSTEM = (
     "You turn a price researcher's notes into structured data. Extract every offer mentioned into the "
-    "findings list. Omit offers without a price. summary is a short paragraph (2-4 sentences) describing "
-    "the best current price, where, and whether it beats the target price if one was given."
+    "findings list. For each offer: price is the effective price after discounts/coupons; original_price "
+    "is the struck-through list price when one was shown (null otherwise); put promo codes and caveats in "
+    "notes. Omit offers without a price. summary is a short paragraph (2-4 sentences) describing the best "
+    "current effective price, where, any active discount, and whether it beats the target price if one "
+    "was given."
 )
 
 
