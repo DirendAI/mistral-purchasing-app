@@ -44,14 +44,17 @@ Research runs are recorded in `research_runs` (with the workflow execution id), 
 ## Run locally
 
 ```bash
-# install tools (git, uv, Docker, bun, mistral CLI), then:
+# install tools first: git, uv, Docker, bun 1.4.0 (pinned in package.json), mistral CLI
+git clone https://github.com/DirendAI/mistral-purchasing-app.git && cd mistral-purchasing-app
+bun run install-all        # fresh clone has no node_modules/.venv: this runs bun install + uv sync
 mistral login
 # set MISTRAL_API_KEY in .env
-mistral apps dev
+mistral apps dev           # start Docker first: the local Postgres runs in Docker
 ```
 
-Open the printed URL (e.g. `http://mistral-purchasing-app.apps.localhost:8080`). Docker must be
-running for the local Postgres.
+`node_modules` and `.venv` are gitignored, so `bun run install-all` (`bash tools/install.sh`) is
+required once after cloning — without it the web module fails with `vite: command not found`.
+Open the printed URL (e.g. `http://mistral-purchasing-app.apps.localhost:8080`).
 
 ## Deploy
 
