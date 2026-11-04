@@ -112,26 +112,27 @@ def anon_client() -> TestClient:
     return TestClient(build_app())
 
 
-def test_whoami_lives_under_beta_users_on_the_sdk_client() -> None:
-    """Pins the SDK path _auth resolves the caller through: client.users does not exist."""
+def test_get_identity_lives_under_beta_users_on_the_sdk_client() -> None:
+    """Pins the SDK path _auth resolves the caller through: client.users does not exist,
+    and the identity endpoint is /v1/users/me (get_identity), not /v1/whoami."""
     from mistralai.client import Mistral
 
     client = Mistral(api_key="test-key")
-    assert hasattr(client.beta.users, "whoami_async")
+    assert hasattr(client.beta.users, "get_identity_async")
 
 
 async def test_resolve_principal_id_passes_the_gateway_token_as_bearer_security(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """whoami_async requires an explicit `security`; the gateway token must be sent as the bearer."""
+    """get_identity_async requires an explicit `security`; the gateway token must be sent as the bearer."""
     import api.routers.api.v1._auth as auth
 
     captured: dict = {}
 
     class _Users:
-        async def whoami_async(self, *, security):
+        async def get_identity_async(self, *, security):
             captured["security"] = security
-            return SimpleNamespace(principal=SimpleNamespace(principal_type="user", id="u1"))
+            return SimpleNamespace(id="u1")
 
     class _Client:
         beta = SimpleNamespace(users=_Users())
