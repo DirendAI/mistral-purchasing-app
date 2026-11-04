@@ -22,3 +22,6 @@ minimumReleaseAgeExcludes = []
 # at the end of the file when it installs capability packages, so the table stays last.
 [install.scopes]
 "@mistralai-capabilities" = "https://registry.npmjs.org/"
+
+# @mistral/* are installed from http://127.0.0.1:0/ (nowhere: no Mistral registry serves them to this app, and public npm must not).
+"@mistral" = { url = "http://127.0.0.1:0/" }
