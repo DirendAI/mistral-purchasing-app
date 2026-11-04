@@ -14,6 +14,8 @@ you set per product.
 - **Add-product dialog**: add a product by uploading a photo of it, or a photo URL, plus the store
   page where you saw it, a product URL you enter manually, an optional target price, and free-form
   extra AI context. Optionally start the first price research immediately.
+- **Edit product**: from the product page, edit its name, links, target price, or the extra AI
+  context (and remove the uploaded photo) at any time via `PATCH /api/v1/products/{id}`.
 - **Manual research**: a "Research now" button per product triggers a research run right away.
 - **Custom schedule per product**: repeat the research on a cron expression (UTC) or a fixed
   interval, enabled/paused from the app. Schedules are Mistral Workflows schedules; the app keeps

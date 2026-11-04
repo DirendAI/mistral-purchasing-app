@@ -12,10 +12,12 @@ import {
   putProductSchedule,
   putSettings,
   triggerResearch,
+  updateProduct,
 } from "./generated";
 import type {
   BodyCreateProduct,
   ProductOut,
+  ProductPatch,
   ResearchRunOut,
   ScheduleIn,
   ScheduleOut,
@@ -82,6 +84,19 @@ export const useCreateProduct = () => {
   return useMutation({
     mutationFn: (body: BodyCreateProduct) => unwrap(createProduct({ body, throwOnError: true })),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: productsKey }),
+  });
+};
+
+export const useUpdateProduct = (productId: string) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (body: ProductPatch) =>
+      unwrap(updateProduct({ path: { product_id: productId }, body, throwOnError: true })),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["product", productId] });
+      queryClient.invalidateQueries({ queryKey: productsKey });
+    },
   });
 };
 
