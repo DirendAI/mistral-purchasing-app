@@ -25,7 +25,7 @@ async def _resolve_principal_id(token: str) -> str:
     if cached is not None:
         _principal_ids.move_to_end(key)
         return cached
-    principal = (await caller_mistral_client().users.whoami_async()).principal
+    principal = (await caller_mistral_client().beta.users.whoami_async()).principal
     principal_id = getattr(principal, "id", None)
     resolved = f"{principal.principal_type}:{principal_id}" if principal_id is not None else f"token:{key}"
     _principal_ids[key] = resolved

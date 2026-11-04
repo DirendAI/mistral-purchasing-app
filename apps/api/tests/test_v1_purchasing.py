@@ -112,6 +112,14 @@ def anon_client() -> TestClient:
     return TestClient(build_app())
 
 
+def test_whoami_lives_under_beta_users_on_the_sdk_client() -> None:
+    """Pins the SDK path _auth resolves the caller through: client.users does not exist."""
+    from mistralai.client import Mistral
+
+    client = Mistral(api_key="test-key")
+    assert hasattr(client.beta.users, "whoami_async")
+
+
 def test_v1_routes_require_a_caller(anon_client: TestClient) -> None:
     product_id = uuid.uuid4()
     for method, path in [
