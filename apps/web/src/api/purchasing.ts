@@ -4,9 +4,11 @@ import {
   createProduct,
   deleteProduct,
   deleteProductSchedule,
+  getProduct,
   getProductSchedule,
   getSettings,
   listProducts,
+  listResearchRuns,
   putProductSchedule,
   putSettings,
   triggerResearch,
@@ -35,6 +37,22 @@ export const useProducts = () =>
 
 export const useSettings = () =>
   useQuery({ queryKey: settingsKey, queryFn: () => unwrap(getSettings({ throwOnError: true })) });
+
+export const useProduct = (productId: string) =>
+  useQuery({
+    queryKey: ["product", productId],
+    queryFn: () => unwrap(getProduct({ path: { product_id: productId }, throwOnError: true })),
+  });
+
+export const useResearchRuns = (productId: string) =>
+  useQuery({
+    queryKey: ["research-runs", productId],
+    queryFn: () =>
+      unwrap(listResearchRuns({ path: { product_id: productId }, query: { limit: 100 }, throwOnError: true })),
+    // Keep polling while the latest run is still going.
+    refetchInterval: (query) =>
+      query.state.data?.[0]?.status === "running" ? 5_000 : false,
+  });
 
 export const useSaveSettings = () => {
   const queryClient = useQueryClient();

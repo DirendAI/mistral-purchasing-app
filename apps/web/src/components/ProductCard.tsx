@@ -1,4 +1,6 @@
+import { Link } from "@tanstack/react-router";
 import { useState } from "react";
+import type { MouseEvent } from "react";
 
 import { useDeleteProduct, useTriggerResearch, type ProductOut } from "../api/purchasing";
 
@@ -20,8 +22,19 @@ export const ProductCard = ({
   const deleteProduct = useDeleteProduct();
   const run = product.latest_run;
 
+  // The card navigates to the detail page; buttons must not trigger that navigation.
+  const guard = (handler?: () => void) => (event: MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    handler?.();
+  };
+
   return (
-    <div className="flex flex-col gap-3 rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+    <Link
+      to="/products/$productId"
+      params={{ productId: product.id }}
+      className="flex flex-col gap-3 rounded-lg border border-gray-200 bg-white p-4 shadow-sm hover:border-gray-400"
+    >
       <div className="flex items-start gap-3">
         {product.has_image ? (
           <img
@@ -97,7 +110,7 @@ export const ProductCard = ({
               </p>
             )}
             {run.findings && run.findings.length > 0 && (
-              <button className="mt-1 text-xs underline" onClick={() => setExpanded((v) => !v)}>
+              <button className="mt-1 text-xs underline" onClick={guard(() => setExpanded((v) => !v))}>
                 {expanded ? "Hide" : "Show"} {run.findings.length} finding(s)
               </button>
             )}
@@ -138,13 +151,16 @@ export const ProductCard = ({
 
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <button
-          onClick={() => triggerResearch.mutate(product.id)}
+          onClick={guard(() => triggerResearch.mutate(product.id))}
           disabled={triggerResearch.isPending}
           className="rounded bg-black px-3 py-1.5 text-white disabled:opacity-50"
         >
           {triggerResearch.isPending ? "Starting…" : "Research now"}
         </button>
-        <button onClick={() => onSchedule(product)} className="rounded border border-gray-300 px-3 py-1.5">
+        <button
+          onClick={guard(() => onSchedule(product))}
+          className="rounded border border-gray-300 px-3 py-1.5"
+        >
           Schedule{product.schedule ? (product.schedule.enabled ? " ✓" : " (paused)") : ""}
         </button>
         {product.schedule && (
@@ -155,7 +171,7 @@ export const ProductCard = ({
           </span>
         )}
         <button
-          onClick={() => deleteProduct.mutate(product.id)}
+          onClick={guard(() => deleteProduct.mutate(product.id))}
           disabled={deleteProduct.isPending}
           className="ml-auto rounded border border-red-300 px-3 py-1.5 text-red-700 disabled:opacity-50"
         >
@@ -165,6 +181,6 @@ export const ProductCard = ({
       {(triggerResearch.error || deleteProduct.error) && (
         <p className="text-xs text-red-600">{(triggerResearch.error ?? deleteProduct.error)?.message}</p>
       )}
-    </div>
+    </Link>
   );
 };
