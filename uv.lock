@@ -2306,6 +2306,7 @@ name = "workflows-app"
 version = "0.1.0"
 source = { editable = "apps/worker" }
 dependencies = [
+    { name = "db" },
     { name = "env" },
     { name = "mistralai" },
     { name = "mistralai-workflows", extra = ["mistralai"] },
@@ -2316,6 +2317,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "db", editable = "packages/py/db" },
     { name = "env", editable = "packages/py/env" },
     { name = "mistralai", specifier = ">=2.9.4" },
     { name = "mistralai-workflows", extras = ["mistralai"], specifier = ">=3.15.0", index = "https://pypi.org/simple" },

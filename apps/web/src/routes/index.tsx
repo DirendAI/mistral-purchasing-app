@@ -1,29 +1,50 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
 
-import { useAppName } from "../app-name";
+import { useProducts, type ProductOut } from "../api/purchasing";
+import { AddProductDialog } from "../components/AddProductDialog";
+import { AppShell } from "../components/AppShell";
+import { ProductCard } from "../components/ProductCard";
+import { ScheduleDialog } from "../components/ScheduleDialog";
 
-const Home = () => {
-  const appName = useAppName();
+const TrackingPage = () => {
+  const { data: products, isLoading, error } = useProducts();
+  const [addOpen, setAddOpen] = useState(false);
+  const [scheduleFor, setScheduleFor] = useState<ProductOut | null>(null);
 
   return (
-    <main className="mx-auto flex min-h-full max-w-2xl flex-col justify-center gap-2 p-8">
-      <h1 className="text-3xl font-semibold">{appName}</h1>
-      <p>
-        Edit <code>apps/web/src/routes/index.tsx</code>, or add a route under{" "}
-        <code>apps/web/src/routes/</code>.
-      </p>
-    </main>
+    <AppShell>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-semibold">Tracked products</h1>
+        <button
+          onClick={() => setAddOpen(true)}
+          className="rounded bg-black px-4 py-2 text-sm text-white"
+        >
+          + Add product
+        </button>
+      </div>
+
+      {isLoading && <p className="mt-6 text-gray-500">Loading…</p>}
+      {error && <p className="mt-6 text-red-600">{error.message}</p>}
+      {products && products.length === 0 && (
+        <p className="mt-6 text-gray-500">
+          Nothing tracked yet. Add a product with a photo or a store link and the app will research prices near you.
+        </p>
+      )}
+
+      <div className="mt-6 grid gap-4 md:grid-cols-2">
+        {products?.map((product) => (
+          <ProductCard key={product.id} product={product} onSchedule={setScheduleFor} />
+        ))}
+      </div>
+
+      {addOpen && <AddProductDialog onClose={() => setAddOpen(false)} />}
+      {scheduleFor && <ScheduleDialog product={scheduleFor} onClose={() => setScheduleFor(null)} />}
+    </AppShell>
   );
 };
 
 export const Route = createFileRoute("/")({
-  beforeLoad: ({ context }) => {
-    const to = context.landingPath();
-
-    if (to !== undefined && to !== "" && to !== "/") {
-      // oxlint-disable-next-line typescript/only-throw-error -- TanStack Router's redirect is thrown, by design
-      throw redirect({ href: to });
-    }
-  },
-  component: Home,
+  staticData: { landing: true },
+  component: TrackingPage,
 });

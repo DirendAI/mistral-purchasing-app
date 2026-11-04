@@ -5,6 +5,7 @@ requires-python = ">=3.12,<3.15"
 dependencies = [
     "utils",
     "env",
+    "db",
     "mistralai>=2.9.4",
     "mistralai-workflows[mistralai]>=3.15.0",
     "pydantic>=2.14.1",
@@ -21,5 +22,6 @@ module-name = "worker"
 [tool.uv.sources]
 utils = { workspace = true }
 env = { workspace = true }
+db = { workspace = true }
 mistralai-workflows = { index = "pypi" }
 
