@@ -2,6 +2,7 @@ import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 
 import {
+  describeSchedule,
   useDeleteProduct,
   useProduct,
   useResearchRuns,
@@ -168,10 +169,7 @@ const ProductDetailPage = () => {
               {product.ai_context && <p className="mt-2 max-w-2xl text-sm text-gray-600">{product.ai_context}</p>}
               {product.schedule && (
                 <p className="mt-2 text-xs text-gray-500">
-                  Schedule:{" "}
-                  {product.schedule.cron_expressions?.length
-                    ? product.schedule.cron_expressions.join(", ")
-                    : `every ${Math.round((product.schedule.interval_seconds ?? 0) / 60)} min`}
+                  Schedule: {describeSchedule(product.schedule)}
                   {product.schedule.enabled ? "" : " (paused)"}
                 </p>
               )}

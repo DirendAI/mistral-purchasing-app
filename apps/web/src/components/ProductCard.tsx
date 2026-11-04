@@ -2,7 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import type { MouseEvent } from "react";
 
-import { useDeleteProduct, useTriggerResearch, type ProductOut } from "../api/purchasing";
+import { describeSchedule, useDeleteProduct, useTriggerResearch, type ProductOut } from "../api/purchasing";
 
 const fmtPrice = (price: number | null | undefined, currency: string | null | undefined) =>
   price == null ? "—" : `${price.toFixed(2)} ${currency ?? ""}`.trim();
@@ -167,11 +167,7 @@ export const ProductCard = ({
           Schedule{product.schedule ? (product.schedule.enabled ? " ✓" : " (paused)") : ""}
         </button>
         {product.schedule && (
-          <span className="text-xs text-gray-500">
-            {product.schedule.cron_expressions?.length
-              ? product.schedule.cron_expressions.join(", ")
-              : `every ${Math.round((product.schedule.interval_seconds ?? 0) / 60)} min`}
-          </span>
+          <span className="text-xs text-gray-500">{describeSchedule(product.schedule)}</span>
         )}
         <button
           onClick={guard(() => deleteProduct.mutate(product.id))}

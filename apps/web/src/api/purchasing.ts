@@ -154,4 +154,26 @@ export const useDeleteSchedule = (productId: string) => {
   });
 };
 
+const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+/** Human-readable label for a schedule: "hourly", "daily at 09:00", "weekly on Monday at 09:00", … */
+export const describeSchedule = (schedule: ScheduleOut): string => {
+  if (schedule.interval_seconds) {
+    return schedule.interval_seconds === 3600
+      ? "hourly"
+      : `every ${Math.round(schedule.interval_seconds / 60)} min`;
+  }
+  const expression = schedule.cron_expressions?.[0];
+  if (!expression) return "";
+  const parts = expression.split(/\s+/);
+  if (parts.length !== 5) return expression;
+  const [minute, hour, dom, month, dow] = parts;
+  const at = `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+  if (dom === "*" && month === "*" && dow === "*") return `daily at ${at}`;
+  if (dom === "*" && month === "*" && /^\d$/.test(dow)) {
+    return `weekly on ${DAY_NAMES[Number(dow)] ?? dow} at ${at}`;
+  }
+  return expression;
+};
+
 export type { ProductOut };
