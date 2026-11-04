@@ -2,6 +2,11 @@
   "schemaVersion": 2,
   "kind": "app",
   "name": "mistral-purchasing-app",
+  "deployment": {
+    "organizationId": "00e7b3cd-bb2f-497e-a4b4-54c166b945bc",
+    "workspaceId": "5a8253fa-f652-4182-a52e-11c8c51dbece",
+    "appId": "01a1a7a4-683a-75ff-8f44-1a697a752c7a"
+  },
   "modules": [
     {
       "type": "app",
