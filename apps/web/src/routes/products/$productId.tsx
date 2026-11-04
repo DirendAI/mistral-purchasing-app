@@ -13,11 +13,8 @@ import type { ResearchRunOut } from "../../api/generated";
 import { AppShell } from "../../components/AppShell";
 import { PriceHistoryChart, type PricePoint } from "../../components/PriceHistoryChart";
 import { ScheduleDialog } from "../../components/ScheduleDialog";
-
-const fmtPrice = (price: number | null | undefined, currency: string | null | undefined) =>
-  price == null ? "—" : `${price.toFixed(2)} ${currency ?? ""}`.trim();
-
-const fmtTime = (iso: string | null | undefined) => (iso ? new Date(iso).toLocaleString() : "—");
+import { Button, StatusBadge, TargetBadge, errorBoxClass } from "../../components/ui";
+import { fmtPrice, fmtTime } from "../../format";
 
 const bestPriceOf = (run: ResearchRunOut): number | null => {
   if (run.best_price != null) return run.best_price;
@@ -29,32 +26,14 @@ const RunCard = ({ run }: { run: ResearchRunOut }) => {
   const [expanded, setExpanded] = useState(false);
 
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-4 text-sm shadow-sm">
+    <div className="rounded-xl border border-gray-200 bg-white p-4 text-sm shadow-sm">
       <div className="flex flex-wrap items-center gap-2">
-        <span
-          className={`rounded px-2 py-0.5 text-xs font-medium ${
-            run.status === "completed"
-              ? "bg-green-100 text-green-800"
-              : run.status === "failed"
-                ? "bg-red-100 text-red-800"
-                : "bg-yellow-100 text-yellow-800"
-          }`}
-        >
-          {run.status}
-        </span>
+        <StatusBadge status={run.status} />
         <span className="text-xs text-gray-500">{run.trigger}</span>
         <span className="text-xs text-gray-500">
           {fmtTime(run.started_at)} → {fmtTime(run.finished_at)}
         </span>
-        {run.target_met != null && (
-          <span
-            className={`rounded px-2 py-0.5 text-xs font-medium ${
-              run.target_met ? "bg-green-100 text-green-800" : "bg-gray-200 text-gray-700"
-            }`}
-          >
-            {run.target_met ? "target reached" : "above target"}
-          </span>
-        )}
+        {run.target_met != null && <TargetBadge met={run.target_met} />}
         <span className="ml-auto font-medium">
           Best: {fmtPrice(run.best_price, run.findings?.[0]?.currency)}
           {run.best_store ? ` at ${run.best_store}` : ""}
@@ -126,12 +105,16 @@ const ProductDetailPage = () => {
 
   return (
     <AppShell>
-      <Link to="/" className="text-sm underline">
+      <Link to="/" className="inline-flex items-center gap-1 rounded text-sm text-gray-600 hover:text-gray-900 hover:underline">
         ← All products
       </Link>
 
       {isLoading && <p className="mt-6 text-gray-500">Loading…</p>}
-      {error && <p className="mt-6 text-red-600">{error.message}</p>}
+      {error && (
+        <div role="alert" className={`mt-6 ${errorBoxClass}`}>
+          {error.message}
+        </div>
+      )}
 
       {product && (
         <>
@@ -140,15 +123,17 @@ const ProductDetailPage = () => {
               <img
                 src={`/api/v1/products/${product.id}/image`}
                 alt={product.name}
-                className="h-28 w-28 rounded object-cover"
+                className="h-28 w-28 rounded-lg object-cover"
               />
             ) : product.image_url ? (
-              <img src={product.image_url} alt={product.name} className="h-28 w-28 rounded object-cover" />
+              <img src={product.image_url} alt={product.name} className="h-28 w-28 rounded-lg object-cover" />
             ) : (
-              <div className="flex h-28 w-28 items-center justify-center rounded bg-gray-100 text-3xl">📦</div>
+              <div className="flex h-28 w-28 items-center justify-center rounded-lg bg-gray-100 text-3xl">
+                📦
+              </div>
             )}
             <div className="min-w-0 flex-1">
-              <h1 className="text-2xl font-semibold">{product.name}</h1>
+              <h1 className="text-2xl font-semibold tracking-tight">{product.name}</h1>
               {product.target_price != null && (
                 <p className="mt-1 text-sm text-gray-600">
                   Target price: {fmtPrice(product.target_price, product.currency)}
@@ -175,46 +160,49 @@ const ProductDetailPage = () => {
               )}
             </div>
             <div className="flex gap-2">
-              <button
+              <Button
+                variant="primary"
+                className="px-4 py-2"
                 onClick={() => triggerResearch.mutate(product.id)}
                 disabled={triggerResearch.isPending || runs[0]?.status === "running"}
-                className="rounded bg-black px-4 py-2 text-sm text-white disabled:opacity-50"
               >
                 {runs[0]?.status === "running" ? "Running…" : triggerResearch.isPending ? "Starting…" : "Research now"}
-              </button>
-              <button
-                onClick={() => setScheduleOpen(true)}
-                className="rounded border border-gray-300 px-4 py-2 text-sm"
-              >
+              </Button>
+              <Button variant="secondary" className="px-4 py-2" onClick={() => setScheduleOpen(true)}>
                 Schedule
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="danger"
+                className="px-4 py-2"
                 onClick={() => deleteProduct.mutate(product.id, { onSuccess: () => navigate({ to: "/" }) })}
                 disabled={deleteProduct.isPending}
-                className="rounded border border-red-300 px-4 py-2 text-sm text-red-700 disabled:opacity-50"
               >
                 Delete
-              </button>
+              </Button>
             </div>
           </div>
           {(triggerResearch.error || deleteProduct.error) && (
-            <p className="mt-2 text-sm text-red-600">{(triggerResearch.error ?? deleteProduct.error)?.message}</p>
+            <div role="alert" className={`mt-2 ${errorBoxClass}`}>
+              {(triggerResearch.error ?? deleteProduct.error)?.message}
+            </div>
           )}
 
           <section className="mt-8">
-            <h2 className="text-lg font-semibold">Price history</h2>
-            <div className="mt-2 rounded-lg border border-gray-200 bg-white p-4">
+            <h2 className="text-lg font-semibold tracking-tight">Price history</h2>
+            <div className="mt-2 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
               <PriceHistoryChart points={points} targetPrice={product.target_price} currency={product.currency} />
             </div>
           </section>
 
           <section className="mt-8 mb-8">
-            <h2 className="text-lg font-semibold">Research runs</h2>
+            <h2 className="text-lg font-semibold tracking-tight">Research runs</h2>
             {runsQuery.isLoading && <p className="mt-2 text-gray-500">Loading…</p>}
-            {runsQuery.error && <p className="mt-2 text-red-600">{runsQuery.error.message}</p>}
-            {runs.length === 0 && !runsQuery.isLoading && (
-              <p className="mt-2 text-gray-500">No research runs yet.</p>
+            {runsQuery.error && (
+              <div role="alert" className={`mt-2 ${errorBoxClass}`}>
+                {runsQuery.error.message}
+              </div>
             )}
+            {runs.length === 0 && !runsQuery.isLoading && <p className="mt-2 text-gray-500">No research runs yet.</p>}
             <div className="mt-2 flex flex-col gap-3">
               {[...runs]
                 .sort((a, b) => new Date(b.started_at).getTime() - new Date(a.started_at).getTime())

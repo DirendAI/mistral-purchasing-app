@@ -2,9 +2,7 @@ import { useState } from "react";
 import type { FormEvent } from "react";
 
 import { useCreateProduct } from "../api/purchasing";
-
-const inputClass =
-  "w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-gray-500 focus:outline-none";
+import { Button, Dialog, errorBoxClass, inputClass } from "./ui";
 
 export const AddProductDialog = ({ onClose }: { onClose: () => void }) => {
   const createProduct = useCreateProduct();
@@ -37,15 +35,18 @@ export const AddProductDialog = ({ onClose }: { onClose: () => void }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-10 flex items-center justify-center bg-black/40 p-4">
-      <form
-        onSubmit={submit}
-        className="flex max-h-full w-full max-w-lg flex-col gap-3 overflow-y-auto rounded-lg bg-white p-6 shadow-xl"
-      >
-        <h2 className="text-lg font-semibold">Add a product to track</h2>
+    <Dialog title="Add a product to track" onClose={onClose}>
+      <form onSubmit={submit} className="flex flex-col gap-3">
         <label className="flex flex-col gap-1 text-sm">
           <span className="font-medium">Name *</span>
-          <input className={inputClass} value={name} onChange={(e) => setName(e.target.value)} required maxLength={300} />
+          <input
+            className={inputClass}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+            maxLength={300}
+            autoFocus
+          />
         </label>
         <label className="flex flex-col gap-1 text-sm">
           <span className="font-medium">Photo of the product</span>
@@ -58,15 +59,30 @@ export const AddProductDialog = ({ onClose }: { onClose: () => void }) => {
         </label>
         <label className="flex flex-col gap-1 text-sm">
           <span className="font-medium">…or photo URL</span>
-          <input className={inputClass} value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="https://…" />
+          <input
+            className={inputClass}
+            value={imageUrl}
+            onChange={(e) => setImageUrl(e.target.value)}
+            placeholder="https://…"
+          />
         </label>
         <label className="flex flex-col gap-1 text-sm">
           <span className="font-medium">Store page where you saw it</span>
-          <input className={inputClass} value={sourceUrl} onChange={(e) => setSourceUrl(e.target.value)} placeholder="https://store.example/…" />
+          <input
+            className={inputClass}
+            value={sourceUrl}
+            onChange={(e) => setSourceUrl(e.target.value)}
+            placeholder="https://store.example/…"
+          />
         </label>
         <label className="flex flex-col gap-1 text-sm">
           <span className="font-medium">Product URL (entered manually)</span>
-          <input className={inputClass} value={productUrl} onChange={(e) => setProductUrl(e.target.value)} placeholder="https://…" />
+          <input
+            className={inputClass}
+            value={productUrl}
+            onChange={(e) => setProductUrl(e.target.value)}
+            placeholder="https://…"
+          />
         </label>
         <div className="flex gap-3">
           <label className="flex flex-1 flex-col gap-1 text-sm">
@@ -98,20 +114,20 @@ export const AddProductDialog = ({ onClose }: { onClose: () => void }) => {
           <input type="checkbox" checked={researchNow} onChange={(e) => setResearchNow(e.target.checked)} />
           Research prices right away
         </label>
-        {createProduct.error && <p className="text-sm text-red-600">{createProduct.error.message}</p>}
-        <div className="flex justify-end gap-2">
-          <button type="button" onClick={onClose} className="rounded border border-gray-300 px-4 py-2 text-sm">
+        {createProduct.error && (
+          <div role="alert" className={errorBoxClass}>
+            {createProduct.error.message}
+          </div>
+        )}
+        <div className="flex justify-end gap-2 pt-1">
+          <Button type="button" variant="secondary" onClick={onClose}>
             Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={createProduct.isPending || name.trim() === ""}
-            className="rounded bg-black px-4 py-2 text-sm text-white disabled:opacity-50"
-          >
+          </Button>
+          <Button type="submit" variant="primary" disabled={createProduct.isPending || name.trim() === ""}>
             {createProduct.isPending ? "Adding…" : "Add product"}
-          </button>
+          </Button>
         </div>
       </form>
-    </div>
+    </Dialog>
   );
 };

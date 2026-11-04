@@ -54,8 +54,8 @@ export const PriceHistoryChart = ({
             type: "line",
             data: points.map((p) => p.price),
             symbolSize: 7,
-            lineStyle: { width: 2 },
-            itemStyle: { color: "#111827" },
+            lineStyle: { width: 2, color: "#fa500f" },
+            itemStyle: { color: "#fa500f" },
             markLine:
               targetPrice != null
                 ? {

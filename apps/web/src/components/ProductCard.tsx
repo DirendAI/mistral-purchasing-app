@@ -3,12 +3,8 @@ import { useState } from "react";
 import type { MouseEvent } from "react";
 
 import { describeSchedule, useDeleteProduct, useTriggerResearch, type ProductOut } from "../api/purchasing";
-
-const fmtPrice = (price: number | null | undefined, currency: string | null | undefined) =>
-  price == null ? "—" : `${price.toFixed(2)} ${currency ?? ""}`.trim();
-
-const fmtTime = (iso: string | null | undefined) =>
-  iso ? new Date(iso).toLocaleString() : "—";
+import { fmtPrice, fmtTime } from "../format";
+import { Button, StatusBadge, TargetBadge } from "./ui";
 
 export const ProductCard = ({
   product,
@@ -33,26 +29,26 @@ export const ProductCard = ({
     <Link
       to="/products/$productId"
       params={{ productId: product.id }}
-      className="flex flex-col gap-3 rounded-lg border border-gray-200 bg-white p-4 shadow-sm hover:border-gray-400"
+      className="flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:border-gray-300 hover:shadow-md"
     >
       <div className="flex items-start gap-3">
         {product.has_image ? (
           <img
             src={`/api/v1/products/${product.id}/image`}
             alt={product.name}
-            className="h-20 w-20 rounded object-cover"
+            className="h-20 w-20 rounded-lg object-cover"
           />
         ) : product.image_url ? (
-          <img src={product.image_url} alt={product.name} className="h-20 w-20 rounded object-cover" />
+          <img src={product.image_url} alt={product.name} className="h-20 w-20 rounded-lg object-cover" />
         ) : (
-          <div className="flex h-20 w-20 items-center justify-center rounded bg-gray-100 text-2xl">📦</div>
+          <div className="flex h-20 w-20 items-center justify-center rounded-lg bg-gray-100 text-2xl">
+            📦
+          </div>
         )}
         <div className="min-w-0 flex-1">
           <h3 className="truncate font-semibold">{product.name}</h3>
           {product.target_price != null && (
-            <p className="text-sm text-gray-600">
-              Target: {fmtPrice(product.target_price, product.currency)}
-            </p>
+            <p className="text-sm text-gray-600">Target: {fmtPrice(product.target_price, product.currency)}</p>
           )}
           {product.source_url && (
             <p className="truncate text-xs text-gray-500">
@@ -72,35 +68,17 @@ export const ProductCard = ({
         </div>
       </div>
 
-      <div className="rounded bg-gray-50 p-3 text-sm">
+      <div className="rounded-lg bg-gray-50 p-3 text-sm">
         {run == null ? (
           <p className="text-gray-500">No research yet.</p>
         ) : (
           <>
             <div className="flex flex-wrap items-center gap-2">
-              <span
-                className={`rounded px-2 py-0.5 text-xs font-medium ${
-                  run.status === "completed"
-                    ? "bg-green-100 text-green-800"
-                    : run.status === "failed"
-                      ? "bg-red-100 text-red-800"
-                      : "bg-yellow-100 text-yellow-800"
-                }`}
-              >
-                {run.status}
-              </span>
+              <StatusBadge status={run.status} />
               <span className="text-xs text-gray-500">
                 {run.trigger} · {fmtTime(run.finished_at ?? run.started_at)}
               </span>
-              {run.target_met != null && (
-                <span
-                  className={`rounded px-2 py-0.5 text-xs font-medium ${
-                    run.target_met ? "bg-green-100 text-green-800" : "bg-gray-200 text-gray-700"
-                  }`}
-                >
-                  {run.target_met ? "target price reached" : "above target"}
-                </span>
-              )}
+              {run.target_met != null && <TargetBadge met={run.target_met} />}
             </div>
             {run.error && <p className="mt-1 text-xs text-red-600">{run.error}</p>}
             {run.summary && <p className="mt-1 text-gray-700">{run.summary}</p>}
@@ -153,29 +131,25 @@ export const ProductCard = ({
       </div>
 
       <div className="flex flex-wrap items-center gap-2 text-sm">
-        <button
+        <Button
+          variant="primary"
           onClick={guard(() => triggerResearch.mutate(product.id))}
           disabled={triggerResearch.isPending || run?.status === "running"}
-          className="rounded bg-black px-3 py-1.5 text-white disabled:opacity-50"
         >
           {run?.status === "running" ? "Running…" : triggerResearch.isPending ? "Starting…" : "Research now"}
-        </button>
-        <button
-          onClick={guard(() => onSchedule(product))}
-          className="rounded border border-gray-300 px-3 py-1.5"
-        >
+        </Button>
+        <Button variant="secondary" onClick={guard(() => onSchedule(product))}>
           Schedule{product.schedule ? (product.schedule.enabled ? " ✓" : " (paused)") : ""}
-        </button>
-        {product.schedule && (
-          <span className="text-xs text-gray-500">{describeSchedule(product.schedule)}</span>
-        )}
-        <button
+        </Button>
+        {product.schedule && <span className="text-xs text-gray-500">{describeSchedule(product.schedule)}</span>}
+        <Button
+          variant="danger"
+          className="ml-auto"
           onClick={guard(() => deleteProduct.mutate(product.id))}
           disabled={deleteProduct.isPending}
-          className="ml-auto rounded border border-red-300 px-3 py-1.5 text-red-700 disabled:opacity-50"
         >
           Delete
-        </button>
+        </Button>
       </div>
       {(triggerResearch.error || deleteProduct.error) && (
         <p className="text-xs text-red-600">{(triggerResearch.error ?? deleteProduct.error)?.message}</p>
