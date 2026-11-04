@@ -170,7 +170,7 @@ export const describeSchedule = (schedule: ScheduleOut): string => {
   const [minute, hour, dom, month, dow] = parts;
   const at = `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
   if (dom === "*" && month === "*" && dow === "*") return `daily at ${at}`;
-  if (dom === "*" && month === "*" && /^\d$/.test(dow)) {
+  if (dom === "*" && month === "*" && dow != null && /^\d$/.test(dow)) {
     return `weekly on ${DAY_NAMES[Number(dow)] ?? dow} at ${at}`;
   }
   return expression;

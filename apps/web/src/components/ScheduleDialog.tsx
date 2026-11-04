@@ -52,7 +52,7 @@ const inferMode = (schedule: { cron_expressions?: string[] | null; interval_seco
     if (dom === "*" && month === "*" && dow === "*") {
       return { mode: "daily", cron: expression, intervalMinutes: "60", hour: hour ?? "9", minute: minute ?? "0", day: 1 };
     }
-    if (dom === "*" && month === "*" && dow !== "*" && /^\d$/.test(dow)) {
+    if (dom === "*" && month === "*" && dow != null && dow !== "*" && /^\d$/.test(dow)) {
       return {
         mode: "weekly",
         cron: expression,
