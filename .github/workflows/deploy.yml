@@ -24,14 +24,16 @@ jobs:
           echo "$HOME/.mistral/bin" >> "$GITHUB_PATH"
           echo "$HOME/.bun/bin" >> "$GITHUB_PATH"
 
-      - name: Verify the deploy command is registered
+      - name: Sign in headless with the API key and show the resolved identity
         env:
           MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
-        run: mistral apps deploy --help
+        run: |
+          printf '%s\n' "$MISTRAL_API_KEY" | mistral login --api-key -
+          mistral whoami
 
-      - name: Deploy with the workspace API key
+      - name: Deploy the pushed commit to the bound Studio app
         env:
           MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
         run: |
           git fetch origin
-          mistral apps deploy
+          mistral apps deploy --yes
