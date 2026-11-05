@@ -13,6 +13,14 @@ from datetime import timedelta
 from pathlib import Path
 from typing import Any
 
+
+def _app_name() -> str:
+    for parent in Path(__file__).resolve().parents:
+        manifest = parent / "mistral.json"
+        if manifest.is_file():
+            return json.loads(manifest.read_text())["name"]
+    return "mistral-purchasing-app"
+
 import mistralai.workflows as workflows
 from mistralai.workflows.plugins.mistralai import (
     ChatCompletionRequest,
@@ -28,8 +36,7 @@ PARSE_MODEL = "mistral-large-latest"
 
 # The managed agent the app's agent module (apps/agent) is registered under at deploy time:
 # agent-<app name from mistral.json>.
-_APP_NAME = json.loads((Path(__file__).resolve().parents[5] / "mistral.json").read_text())["name"]
-RESEARCH_AGENT_NAME = f"agent-{_APP_NAME}"
+RESEARCH_AGENT_NAME = f"agent-{_app_name()}"
 
 
 class PriceResearchInput(BaseModel):

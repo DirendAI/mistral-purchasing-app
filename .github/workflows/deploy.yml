@@ -50,3 +50,12 @@ jobs:
         run: |
           git fetch origin
           mistral apps deploy --yes
+
+      - name: Dump module logs when the deploy fails
+        if: failure()
+        env:
+          MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
+        run: |
+          mistral apps logs worker --build -n 200 || true
+          mistral apps logs agent --build -n 200 || true
+          mistral apps logs api --build -n 200 || true
