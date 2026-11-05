@@ -2,10 +2,10 @@
 
 Triggered manually from the app (``trigger=manual``) or by a per-product schedule
 (``trigger=schedule``). The run loads the product and the user's location settings, identifies
-the product from its photo when one was uploaded, sends a web-search agent to find current offers
-near the user, parses them into structured findings, and stores the run and its findings in
-Postgres. Every database and model call happens inside an activity; the entrypoint only sequences
-them.
+the product from its photo when one was uploaded, runs the managed price-researcher agent
+(``apps/agent``, deployed once as ``agent-<app>``) to find current offers near the user, parses
+them into structured findings, and stores the run and its findings in Postgres. Every database
+and model call happens inside an activity; the entrypoint only sequences them.
 """
 
 from datetime import timedelta
@@ -13,10 +13,7 @@ from typing import Any
 
 import mistralai.workflows as workflows
 from mistralai.workflows.plugins.mistralai import (
-    Agent,
     ChatCompletionRequest,
-    RemoteSession,
-    Runner,
     SystemMessage,
     UserMessage,
     chat_parse_to_model,
@@ -25,8 +22,10 @@ from mistralai.workflows.plugins.mistralai import (
 from pydantic import BaseModel, Field
 
 VISION_MODEL = "mistral-small-latest"
-RESEARCH_MODEL = "mistral-large-4"
 PARSE_MODEL = "mistral-large-latest"
+
+# The managed agent the app's agent module (apps/agent) is registered under at deploy time.
+RESEARCH_AGENT_NAME = "agent-mistral-purchasing-app"
 
 
 class PriceResearchInput(BaseModel):
@@ -110,97 +109,13 @@ async def create_run(run_id: str, execution_id: str | None, product_id: str, use
         )
 
 
-@workflows.activity(start_to_close_timeout=timedelta(minutes=1), retry_policy_max_attempts=3)
-async def load_research_agent_id() -> str | None:
-    from db.accessors import app_state as app_state_accessors
-    from db.engine import get_session_maker
+@workflows.activity(start_to_close_timeout=timedelta(minutes=10))
+async def run_research_agent(task: str) -> str:
+    from mistralai.agents import agents
 
-    async with get_session_maker()() as session:
-        return await app_state_accessors.get_value(session, "research_agent_id")
-
-
-@workflows.activity(start_to_close_timeout=timedelta(minutes=1), retry_policy_max_attempts=3)
-async def save_research_agent_id(agent_id: str) -> None:
-    from db.accessors import app_state as app_state_accessors
-    from db.engine import get_session_maker
-
-    async with get_session_maker()() as session:
-        await app_state_accessors.set_value(session, "research_agent_id", agent_id)
-
-
-def _strip_tags(html: str) -> str:
-    import re
-    from html import unescape
-
-    text = re.sub(r"(?is)<(script|style)[^>]*>.*?</\1>", " ", html)
-    text = re.sub(r"(?s)<[^>]+>", " ", text)
-    return re.sub(r"\s+", " ", unescape(text)).strip()
-
-
-_BROWSER_HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/126.0.0.0 Safari/537.36"
-    ),
-    "Accept-Language": "en-US,en;q=0.9",
-}
-
-
-@workflows.activity(start_to_close_timeout=timedelta(minutes=1))
-async def web_search(query: str) -> str:
-    """Search the web for current product prices and offers.
-
-    Args:
-        query: the search query, e.g. '<product> price <store> <city>'
-    """
-    import re
-    from urllib.parse import parse_qs, quote_plus, unquote, urlparse
-
-    import httpx
-
-    url = f"https://html.duckduckgo.com/html/?q={quote_plus(query)}"
-    try:
-        async with httpx.AsyncClient(timeout=20.0, follow_redirects=True, headers=_BROWSER_HEADERS) as client:
-            response = await client.get(url)
-        response.raise_for_status()
-    except Exception as error:
-        return f"web_search failed for query {query!r}: {error}"
-    html = response.text
-    results = re.findall(r'class="result__a"\s+href="([^"]+)"[^>]*>(.*?)</a>', html, re.S)
-    snippets = re.findall(r'class="result__snippet"[^>]*>(.*?)</a>', html, re.S)
-    lines = []
-    for index, (href, title_html) in enumerate(results[:8]):
-        link = href
-        if "uddg=" in link:
-            link = parse_qs(urlparse(href).query).get("uddg", [href])[0]
-        link = unquote(link)
-        title = _strip_tags(title_html)
-        snippet = _strip_tags(snippets[index]) if index < len(snippets) else ""
-        lines.append(f"{index + 1}. {title}\n   {link}\n   {snippet}")
-    if not lines:
-        return f"No results found for query {query!r}."
-    return "\n".join(lines)
-
-
-@workflows.activity(start_to_close_timeout=timedelta(minutes=1))
-async def open_page(url: str) -> str:
-    """Fetch a web page and return its visible text, truncated.
-
-    Args:
-        url: the http(s) page to read, usually a result URL from web_search
-    """
-    import httpx
-
-    try:
-        async with httpx.AsyncClient(timeout=30.0, follow_redirects=True, headers=_BROWSER_HEADERS) as client:
-            response = await client.get(url)
-        response.raise_for_status()
-    except Exception as error:
-        return f"open_page failed for {url}: {error}"
-    content_type = response.headers.get("content-type", "")
-    if "html" not in content_type and "text" not in content_type and content_type:
-        return f"{url} is not a text page (content-type {content_type!r}); no content extracted."
-    return _strip_tags(response.text)[:8000]
+    agent = agents.Agent.load_from(agent_name=RESEARCH_AGENT_NAME)
+    result = await agent.run(task)
+    return getattr(result, "text", None) or str(result)
 
 
 @workflows.activity(start_to_close_timeout=timedelta(minutes=3))
@@ -302,15 +217,6 @@ async def fail_run(run_id: str, error: str) -> None:
         await run_accessors.finish_run(session, uuid.UUID(run_id), status="failed", error=error[:2000])
 
 
-def _outputs_to_text(outputs: Any) -> str:
-    """All agent outputs as text: final text chunks plus any other chunk (tool calls, errors)."""
-    parts: list[str] = []
-    for output in outputs:
-        text = getattr(output, "text", None)
-        parts.append(text if isinstance(text, str) and text else str(output))
-    return "\n".join(part for part in parts if part and part != "None")
-
-
 def _research_task(context: dict[str, Any]) -> str:
     lines = [
         f"Product to research: {context['name']}",
@@ -339,26 +245,6 @@ def _research_task(context: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-_RESEARCHER_INSTRUCTIONS = (
-    "You are a price researcher. Use the web_search tool to find current prices for the exact product the "
-    "user asks about, in stores near the user's location (online stores that ship there, and physical "
-    "stores within the given distance), and the open_page tool to read the most promising result pages. "
-    "Always ground every price in a search result or page you actually opened; include the store name and "
-    "the product page URL for each offer. Never invent prices. "
-    "PRICE ACCURACY: report the effective price a buyer actually pays after all visible discounts, sale "
-    "prices, coupons and promo codes. If a page shows a struck-through original price next to a lower "
-    "sale price, the sale price is the price and the struck-through one is the original. Prefer the price "
-    "on the product page over a search snippet. If the real price is not clearly visible (login required, "
-    "'contact us', dynamic pricing), set the price to null and explain in the note. "
-    "SEARCH BUDGET: every web_search call scrapes a live search engine and can be rate-limited, so be "
-    "frugal. Run at most 8 web_search calls in total, issue related queries in parallel within a single "
-    "turn instead of one per turn, and stop searching as soon as you have prices from at least 5 stores "
-    "or new searches stop surfacing new stores. Prefer open_page on the most promising results over "
-    "extra searches. "
-    "When you are done, summarize every offer you found, cheapest first, one per line: "
-    "'STORE | price CURRENCY | original CURRENCY | in stock: yes/no | distance: X km | URL | note'."
-)
-
 _PARSE_SYSTEM = (
     "You turn a price researcher's notes into structured data. Extract every offer mentioned into the "
     "findings list. For each offer: price is the effective price after discounts/coupons; original_price "
@@ -366,15 +252,6 @@ _PARSE_SYSTEM = (
     "notes. Omit offers without a price. summary is a short paragraph (2-4 sentences) describing the best "
     "current effective price, where, any active discount, and whether it beats the target price if one "
     "was given."
-)
-
-
-_RESEARCH_AGENT = Agent(
-    model=RESEARCH_MODEL,
-    name="price-researcher",
-    description="Finds current prices for a product in stores near the user's location.",
-    instructions=_RESEARCHER_INSTRUCTIONS,
-    tools=[web_search, open_page],
 )
 
 
@@ -392,18 +269,7 @@ class PriceResearchWorkflow:
                 identified = await describe_product_image(request.product_id, request.user_id)
                 if identified:
                     task = f"Product identified from the uploaded photo: {identified}\n\n{task}"
-            stored_agent_id = await load_research_agent_id()
-            if stored_agent_id:
-                _RESEARCH_AGENT.id = stored_agent_id
-            try:
-                outputs = await Runner.run(agent=_RESEARCH_AGENT, inputs=task, session=RemoteSession(), max_turns=8)
-            except Exception:
-                if stored_agent_id:
-                    _RESEARCH_AGENT.id = None
-                raise
-            if _RESEARCH_AGENT.id is not None:
-                await save_research_agent_id(_RESEARCH_AGENT.id)
-            raw = _outputs_to_text(outputs)
+            raw = await run_research_agent(task)
             outcome = await chat_parse_to_model(
                 ResearchOutcome,
                 ChatCompletionRequest(
