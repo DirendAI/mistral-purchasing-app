@@ -56,6 +56,10 @@ jobs:
         env:
           MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
         run: |
-          mistral apps logs worker --build -n 200 || true
-          mistral apps logs agent --build -n 200 || true
-          mistral apps logs api --build -n 200 || true
+          mistral apps list --json || true
+          for m in worker agent api; do
+            echo "=== $m build logs ==="
+            mistral apps logs "$m" --build -n 300 || true
+            echo "=== $m runtime logs ==="
+            mistral apps logs "$m" -n 300 || true
+          done
