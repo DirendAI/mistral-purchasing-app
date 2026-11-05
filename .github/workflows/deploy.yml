@@ -31,6 +31,11 @@ jobs:
           printf '%s\n' "$MISTRAL_API_KEY" | mistral login --api-key -
           mistral whoami
 
+      - name: Install uv (deploying the agent module needs it on PATH)
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
       - name: Enable the mistral_cli_agents feature flag for this run
         run: |
           cfg="$HOME/.config/mistral/config.json"
