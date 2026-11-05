@@ -33,4 +33,4 @@ RUN groupadd -g 1000 app && \
     useradd -u 1000 -g 1000 -m -s /usr/sbin/nologin app
 COPY --from=build --chown=1000:1000 /app /app
 USER 1000:1000
-CMD ["sh", "-c", "exec uv run --frozen --no-dev --no-sync --directory apps/agent agents serve"]
+CMD ["sh", "-c", "exec uv run --frozen --no-dev --no-sync --directory apps/agent agents run-worker"]
