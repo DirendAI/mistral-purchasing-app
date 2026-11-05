@@ -8,7 +8,9 @@ them into structured findings, and stores the run and its findings in Postgres. 
 and model call happens inside an activity; the entrypoint only sequences them.
 """
 
+import json
 from datetime import timedelta
+from pathlib import Path
 from typing import Any
 
 import mistralai.workflows as workflows
@@ -24,8 +26,10 @@ from pydantic import BaseModel, Field
 VISION_MODEL = "mistral-small-latest"
 PARSE_MODEL = "mistral-large-latest"
 
-# The managed agent the app's agent module (apps/agent) is registered under at deploy time.
-RESEARCH_AGENT_NAME = "agent-mistral-purchasing-app"
+# The managed agent the app's agent module (apps/agent) is registered under at deploy time:
+# agent-<app name from mistral.json>.
+_APP_NAME = json.loads((Path(__file__).resolve().parents[5] / "mistral.json").read_text())["name"]
+RESEARCH_AGENT_NAME = f"agent-{_APP_NAME}"
 
 
 class PriceResearchInput(BaseModel):

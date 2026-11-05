@@ -6,8 +6,10 @@ Web search is done by our own tools (DuckDuckGo HTML scrape over httpx), not the
 billed ``web_search`` builtin.
 """
 
+import json
 import re
 from html import unescape
+from pathlib import Path
 from urllib.parse import parse_qs, quote_plus, unquote, urlparse
 
 import httpx
@@ -15,6 +17,11 @@ from mistralai.agents import agents
 from pydantic import BaseModel, Field
 
 RESEARCH_MODEL = "mistral-large-4"
+
+# The platform registers the app's agent module as agent-<app name> and the worker
+# serves the workflow under the agent's own name, so the two must match.
+_APP_NAME = json.loads((Path(__file__).resolve().parents[4] / "mistral.json").read_text())["name"]
+AGENT_NAME = f"agent-{_APP_NAME}"
 
 _BROWSER_HEADERS = {
     "User-Agent": (
@@ -111,9 +118,9 @@ _RESEARCHER_INSTRUCTIONS = (
 
 agent = agents.Agent(
     model=RESEARCH_MODEL,
-    name="price-researcher",
+    name=AGENT_NAME,
     description="Finds current prices for a product in stores near the user's location.",
     instructions=_RESEARCHER_INSTRUCTIONS,
-    harness=agents.Harness(tools=[web_search, open_page]),
+    tools=[web_search, open_page],
     max_iterations=8,
 )
