@@ -110,6 +110,24 @@ async def create_run(run_id: str, execution_id: str | None, product_id: str, use
         )
 
 
+@workflows.activity(start_to_close_timeout=timedelta(minutes=1), retry_policy_max_attempts=3)
+async def load_research_agent_id() -> str | None:
+    from db.accessors import app_state as app_state_accessors
+    from db.engine import get_session_maker
+
+    async with get_session_maker()() as session:
+        return await app_state_accessors.get_value(session, "research_agent_id")
+
+
+@workflows.activity(start_to_close_timeout=timedelta(minutes=1), retry_policy_max_attempts=3)
+async def save_research_agent_id(agent_id: str) -> None:
+    from db.accessors import app_state as app_state_accessors
+    from db.engine import get_session_maker
+
+    async with get_session_maker()() as session:
+        await app_state_accessors.set_value(session, "research_agent_id", agent_id)
+
+
 @workflows.activity(start_to_close_timeout=timedelta(minutes=3))
 async def describe_product_image(product_id: str, user_id: str) -> str:
     import base64
@@ -297,7 +315,17 @@ class PriceResearchWorkflow:
                 identified = await describe_product_image(request.product_id, request.user_id)
                 if identified:
                     task = f"Product identified from the uploaded photo: {identified}\n\n{task}"
-            outputs = await Runner.run(agent=_RESEARCH_AGENT, inputs=task, session=RemoteSession(), max_turns=8)
+            stored_agent_id = await load_research_agent_id()
+            if stored_agent_id:
+                _RESEARCH_AGENT.id = stored_agent_id
+            try:
+                outputs = await Runner.run(agent=_RESEARCH_AGENT, inputs=task, session=RemoteSession(), max_turns=8)
+            except Exception:
+                if stored_agent_id:
+                    _RESEARCH_AGENT.id = None
+                raise
+            if _RESEARCH_AGENT.id is not None:
+                await save_research_agent_id(_RESEARCH_AGENT.id)
             raw = _outputs_to_text(outputs)
             outcome = await chat_parse_to_model(
                 ResearchOutcome,
