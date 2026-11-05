@@ -20,7 +20,7 @@ jobs:
 
       - name: Install the Mistral CLI and the bun runtime mistral apps needs
         run: |
-          curl -fsSL https://mistral.ai/cli/install.sh | MISTRAL_INSTALL_BUN=1 bash
+          curl -fsSL https://mistral.ai/cli/install.sh | MISTRAL_VERSION=0.17.1 MISTRAL_INSTALL_BUN=1 bash
           echo "$HOME/.mistral/bin" >> "$GITHUB_PATH"
           echo "$HOME/.bun/bin" >> "$GITHUB_PATH"
 

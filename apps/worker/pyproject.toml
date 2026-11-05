@@ -6,6 +6,7 @@ dependencies = [
     "utils",
     "env",
     "db",
+    "httpx>=0.28.1",
     "mistralai>=2.9.4",
     "mistralai-workflows[mistralai]>=3.15.0",
     "pydantic>=2.14.1",
