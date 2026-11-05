@@ -25,7 +25,7 @@ from mistralai.workflows.plugins.mistralai import (
 from pydantic import BaseModel, Field
 
 VISION_MODEL = "mistral-small-latest"
-RESEARCH_MODEL = "mistral-large-latest"
+RESEARCH_MODEL = "mistral-large-4"
 PARSE_MODEL = "mistral-large-latest"
 
 

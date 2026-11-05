@@ -1,0 +1,30 @@
+name: Deploy to Studio
+
+on:
+  push:
+    branches:
+      - master
+
+concurrency:
+  group: studio-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout the pushed commit
+        uses: actions/checkout@v4
+
+      - name: Install the Mistral CLI
+        run: curl -fsSL https://mistral.ai/cli/install.sh | bash
+
+      - name: Deploy with the workspace API key
+        env:
+          MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
+          PATH: ${{ env.HOME }}/.mistral/bin:${{ env.PATH }}
+        run: |
+          git fetch origin
+          mistral deploy
