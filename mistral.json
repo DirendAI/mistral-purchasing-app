@@ -80,6 +80,23 @@
       }
     },
     {
+      "type": "app",
+      "name": "agent",
+      "path": "apps/agent",
+      "routes": [],
+      "port": null,
+      "serve": "worker",
+      "runtime": "python",
+      "platform": "agents",
+      "build": {
+        "context": ".",
+        "dockerfile": "deploy/docker/Dockerfile.agent"
+      },
+      "dev": {
+        "startCommand": "bash ../../tools/uv.sh run --all-packages --directory apps/agent agents serve"
+      }
+    },
+    {
       "type": "managed",
       "name": "postgres",
       "engine": "postgres"

@@ -41,8 +41,9 @@ It was made as follows:
 The business logic is one durable **Mistral Workflows** workflow, `price-research`
 (`apps/worker/src/worker/workflows/price_research.py`): it loads the product and the user's
 location settings, identifies the product from its photo with a vision model
-(`mistral-small-latest`), sends a web-search agent (`mistral-large-4` with Mistral's
-built-in `web_search` tool) to find current offers near the user, parses the offers into
+(`mistral-small-latest`), runs the price-researcher **managed agent** (`apps/agent`, deployed
+once by `mistral apps deploy` as `agent-<app>`, `mistral-large-4` with our own `web_search` /
+`open_page` tools over httpx) to find current offers near the user, parses the offers into
 structured findings, and persists the run and findings in Postgres. All database and model calls
 happen inside workflow activities; the entrypoint only sequences them.
 
