@@ -31,6 +31,14 @@ jobs:
           printf '%s\n' "$MISTRAL_API_KEY" | mistral login --api-key -
           mistral whoami
 
+      - name: Enable the mistral_cli_agents feature flag for this run
+        run: |
+          cfg="$HOME/.config/mistral/config.json"
+          mkdir -p "$(dirname "$cfg")"
+          [ -f "$cfg" ] || echo '{}' > "$cfg"
+          jq '.flags = ((.flags // {}) + {mistral_cli_agents: true})' "$cfg" > "$cfg.tmp" && mv "$cfg.tmp" "$cfg"
+          cat "$cfg"
+
       - name: Deploy the pushed commit to the bound Studio app
         env:
           MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
