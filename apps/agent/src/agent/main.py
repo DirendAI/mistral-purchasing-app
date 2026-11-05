@@ -6,10 +6,8 @@ Web search is done by our own tools (DuckDuckGo HTML scrape over httpx), not the
 billed ``web_search`` builtin.
 """
 
-import json
 import re
 from html import unescape
-from pathlib import Path
 from urllib.parse import parse_qs, quote_plus, unquote, urlparse
 
 import httpx
@@ -18,17 +16,11 @@ from pydantic import BaseModel, Field
 
 RESEARCH_MODEL = "mistral-large-4"
 
-def _app_name() -> str:
-    for parent in Path(__file__).resolve().parents:
-        manifest = parent / "mistral.json"
-        if manifest.is_file():
-            return json.loads(manifest.read_text())["name"]
-    return "mistral-purchasing-app"
-
-
-# The platform registers the app's agent module as agent-<app name> and the worker
-# serves the workflow under the agent's own name, so the two must match.
-AGENT_NAME = f"agent-{_app_name()}"
+# The platform registers the app's agent module as agent-<app name in mistral.json> and the
+# worker serves the workflow under the agent's own name, so the two must match. Kept a
+# constant because the module is imported inside the workflow sandbox, which forbids file
+# I/O at import time.
+AGENT_NAME = "agent-mistral-purchasing-app"
 
 _BROWSER_HEADERS = {
     "User-Agent": (
