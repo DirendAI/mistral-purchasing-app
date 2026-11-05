@@ -256,6 +256,10 @@ _RESEARCHER_INSTRUCTIONS = (
     "sale price, the sale price is the price and the struck-through one is the original. Prefer the price "
     "on the product page over a search snippet. If the real price is not clearly visible (login required, "
     "'contact us', dynamic pricing), set the price to null and explain in the note. "
+    "SEARCH BUDGET: web search is billed per query, so be frugal. Run at most 8 web searches in "
+    "total, issue related queries in parallel within a single turn instead of one per turn, and stop "
+    "searching as soon as you have prices from at least 5 stores or new searches stop surfacing new "
+    "stores. Prefer opening the most promising product pages over running extra searches. "
     "When you are done, summarize every offer you found, cheapest first, one per line: "
     "'STORE | price CURRENCY | original CURRENCY | in stock: yes/no | distance: X km | URL | note'."
 )
@@ -267,6 +271,15 @@ _PARSE_SYSTEM = (
     "notes. Omit offers without a price. summary is a short paragraph (2-4 sentences) describing the best "
     "current effective price, where, any active discount, and whether it beats the target price if one "
     "was given."
+)
+
+
+_RESEARCH_AGENT = Agent(
+    model=RESEARCH_MODEL,
+    name="price-researcher",
+    description="Finds current prices for a product in stores near the user's location.",
+    instructions=_RESEARCHER_INSTRUCTIONS,
+    tools=[{"type": "web_search"}],
 )
 
 
@@ -284,14 +297,7 @@ class PriceResearchWorkflow:
                 identified = await describe_product_image(request.product_id, request.user_id)
                 if identified:
                     task = f"Product identified from the uploaded photo: {identified}\n\n{task}"
-            agent = Agent(
-                model=RESEARCH_MODEL,
-                name="price-researcher",
-                description="Finds current prices for a product in stores near the user's location.",
-                instructions=_RESEARCHER_INSTRUCTIONS,
-                tools=[{"type": "web_search"}],
-            )
-            outputs = await Runner.run(agent=agent, inputs=task, session=RemoteSession(), max_turns=12)
+            outputs = await Runner.run(agent=_RESEARCH_AGENT, inputs=task, session=RemoteSession(), max_turns=8)
             raw = _outputs_to_text(outputs)
             outcome = await chat_parse_to_model(
                 ResearchOutcome,
