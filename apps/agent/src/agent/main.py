@@ -18,10 +18,17 @@ from pydantic import BaseModel, Field
 
 RESEARCH_MODEL = "mistral-large-4"
 
+def _app_name() -> str:
+    for parent in Path(__file__).resolve().parents:
+        manifest = parent / "mistral.json"
+        if manifest.is_file():
+            return json.loads(manifest.read_text())["name"]
+    return "mistral-purchasing-app"
+
+
 # The platform registers the app's agent module as agent-<app name> and the worker
 # serves the workflow under the agent's own name, so the two must match.
-_APP_NAME = json.loads((Path(__file__).resolve().parents[4] / "mistral.json").read_text())["name"]
-AGENT_NAME = f"agent-{_APP_NAME}"
+AGENT_NAME = f"agent-{_app_name()}"
 
 _BROWSER_HEADERS = {
     "User-Agent": (
