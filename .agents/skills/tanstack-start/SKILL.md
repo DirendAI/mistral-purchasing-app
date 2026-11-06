@@ -19,7 +19,7 @@ styles are Tailwind CSS 4, and Vite builds it with Nitro serving the result.
 | `src/landing-fallbacks/` | Where `/` goes when no route claims it. Each file default-exports a `LandingFallback`, asked in filename order. |
 | `src/app-name.ts` | The app's display name, from `APP_NAME` in the app-root `.env`. |
 | `src/index.css` | The Tailwind entry point and global styles. |
-| `vite-plugins/` | Vite plugins other capabilities add. Each file default-exports one plugin. |
+| `vite-plugins/` | Vite plugins other capabilities add. Each file default-exports one plugin, or an array of them. |
 
 ## Add a page
 

@@ -10,10 +10,11 @@ import type { Plugin } from "vite";
 
 /**
  * Where other capabilities plug into this build: every module in `vite-plugins/` default-exports
- * one Vite `Plugin`, and all of them are appended after the stock plugins, in filename order. A
- * plugin changes settings through its own `config()` hook, which Vite merges; one that must run
- * before or after the others says so with `enforce`. Nothing here names a capability. The directory
- * is read once, when the config loads: restart the dev server after adding or editing a plugin.
+ * one Vite `Plugin`, or an array of them for a library that ships its plugin as several, and all of
+ * them are appended after the stock plugins, in filename order. A plugin changes settings through
+ * its own `config()` hook, which Vite merges; one that must run before or after the others says so
+ * with `enforce`. Nothing here names a capability. The directory is read once, when the config
+ * loads: restart the dev server after adding or editing a plugin.
  */
 const PLUGINS_DIR = fileURLToPath(new URL("vite-plugins/", import.meta.url));
 
@@ -36,22 +37,31 @@ const contributedPlugins = async (): Promise<Plugin[]> => {
     )
     .toSorted();
 
-  return await Promise.all(
+  const contributed = await Promise.all(
     files.map(async (file) => {
-      const { module } = await runnerImport<{ default?: Plugin }>(
+      const { module } = await runnerImport<{ default?: Plugin | Plugin[] }>(
         `${PLUGINS_DIR}${file}`
       );
 
+      const plugins = [module.default ?? []].flat();
+
       // A file here that exports no plugin is a mistake, not an opt-out: Vite would drop it silently.
-      if (module.default?.name === undefined || module.default.name === "") {
+      if (
+        plugins.length === 0 ||
+        plugins.some(
+          (plugin) => plugin.name === undefined || plugin.name === ""
+        )
+      ) {
         throw new Error(
-          `vite-plugins/${file} must default-export a Vite plugin.`
+          `vite-plugins/${file} must default-export a Vite plugin, or an array of them.`
         );
       }
 
-      return module.default;
+      return plugins;
     })
   );
+
+  return contributed.flat();
 };
 
 export default defineConfig(async ({ mode }) => ({
@@ -71,8 +81,13 @@ export default defineConfig(async ({ mode }) => ({
   plugins: [
     tailwindcss(),
     tanstackStart(),
-    nitro(),
-    viteReact(),
+    nitro({
+      // Brotli and gzip copies of each compressible build asset over 1 KB, which the server sends
+      // to a browser that accepts them: `node .output/server/index.mjs` compresses nothing on the
+      // fly, so without them a page's JS and CSS cross the wire uncompressed.
+      compressPublicAssets: { brotli: true, gzip: true },
+    }),
+    viteReact({ compiler: true }),
     ...(await contributedPlugins()),
   ],
 }));

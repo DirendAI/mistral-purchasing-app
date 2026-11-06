@@ -1,4 +1,9 @@
-import type { AnyRouter, StaticDataRouteOption } from "@tanstack/react-router";
+import { resolvePath } from "@tanstack/react-router";
+import type {
+  AnyRouter,
+  StaticDataRouteOption,
+  TrailingSlashOption,
+} from "@tanstack/react-router";
 
 declare module "@tanstack/react-router" {
   interface StaticDataRouteOption {
@@ -39,6 +44,17 @@ const canLand = (route: LandingRoute): boolean =>
   route.options.staticData?.landing !== false;
 
 /**
+ * The URL the router serves a route at: its `fullPath` with the trailing slash the router's
+ * `trailingSlash` asks for. An index route's `fullPath` is `/cases/`, which the default `"never"`
+ * redirects to `/cases`; going there directly saves `/` a second redirect.
+ */
+const urlOf = (
+  // Typed here because `AnyRouter` leaves `trailingSlash` as `any`.
+  router: { options: { trailingSlash?: TrailingSlashOption } },
+  route: LandingRoute
+): string => resolvePath("/", route.fullPath, router.options.trailingSlash);
+
+/**
  * The path `/` redirects to: the route with the strongest `staticData.landing` claim, else the first
  * fallback's answer, if any. Routes are the registry — a capability that wants to be the app's front
  * door says so on its own route, so an app opens on whichever installed feature claims it most
@@ -49,7 +65,7 @@ export const landingPath = (
   fallbacks: readonly LandingFallback[] = []
 ): string | undefined => {
   const routes = Object.values<LandingRoute>(router.routesById);
-  let best: { rank: number; id: string; path: string } | undefined;
+  let best: { rank: number; route: LandingRoute } | undefined;
 
   for (const route of routes) {
     const claim = route.options.staticData?.landing;
@@ -68,21 +84,21 @@ export const landingPath = (
     if (
       !best ||
       rank > best.rank ||
-      (rank === best.rank && route.id < best.id)
+      (rank === best.rank && route.id < best.route.id)
     ) {
-      best = { rank, id: route.id, path: route.fullPath };
+      best = { rank, route };
     }
   }
 
   if (best) {
-    return best.path;
+    return urlOf(router, best.route);
   }
 
   for (const fallback of fallbacks) {
     const route = fallback(routes, canLand);
 
     if (route !== undefined && canLand(route)) {
-      return route.fullPath;
+      return urlOf(router, route);
     }
   }
 

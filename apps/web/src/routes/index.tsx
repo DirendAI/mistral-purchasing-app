@@ -1,78 +1,47 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
-import { useProducts, type ProductOut } from "../api/purchasing";
-import { AddProductDialog } from "../components/AddProductDialog";
-import { AppShell } from "../components/AppShell";
-import { ProductCard } from "../components/ProductCard";
-import { ScheduleDialog } from "../components/ScheduleDialog";
-import { Button, errorBoxClass } from "../components/ui";
+import { useAppName } from "../app-name";
+import { useRootScreens } from "../root-screens";
+import type { StarterScreenProps } from "../root-screens";
 
-const ProductSkeletons = () => (
-  <div className="mt-6 grid gap-4 md:grid-cols-2" aria-label="Loading products">
-    {[0, 1, 2].map((i) => (
-      <div key={i} className="animate-pulse rounded-xl border border-gray-200 bg-white p-4">
-        <div className="flex items-start gap-3">
-          <div className="h-20 w-20 rounded-lg bg-gray-200" />
-          <div className="flex-1 space-y-2 py-1">
-            <div className="h-4 w-2/3 rounded bg-gray-200" />
-            <div className="h-3 w-1/3 rounded bg-gray-200" />
-          </div>
-        </div>
-        <div className="mt-3 h-16 rounded-lg bg-gray-100" />
-      </div>
-    ))}
-  </div>
+const STARTER_PATHS = {
+  // i18n-exempt: a path
+  file: "apps/web/src/routes/index.tsx",
+  // i18n-exempt: a path
+  directory: "apps/web/src/routes/",
+};
+
+const PlainStarter = ({ texts, appName, paths }: StarterScreenProps) => (
+  <main className="mx-auto flex min-h-full max-w-2xl flex-col justify-center gap-2 p-8">
+    <p className="text-sm">{texts.starterEyebrow}</p>
+    <h1 className="text-3xl font-semibold">{appName}</h1>
+    <p>
+      {texts.starterHint({
+        // Paths read left to right in any language.
+        file: <code dir="ltr">{paths.file}</code>,
+        directory: <code dir="ltr">{paths.directory}</code>,
+      })}
+    </p>
+  </main>
 );
 
-const TrackingPage = () => {
-  const { data: products, isLoading, error } = useProducts();
-  const [addOpen, setAddOpen] = useState(false);
-  const [scheduleFor, setScheduleFor] = useState<ProductOut | null>(null);
+/** The starter page: the contributed screen when there is one (`root-screens.tsx`), else a plain one. */
+const Home = () => {
+  const appName = useAppName();
+  const { screens, texts } = useRootScreens();
+  const Screen = screens.Starter ?? PlainStarter;
 
-  return (
-    <AppShell>
-      <div className="flex items-center justify-between gap-4">
-        <h1 className="text-2xl font-semibold tracking-tight">Tracked products</h1>
-        <Button variant="primary" onClick={() => setAddOpen(true)}>
-          + Add product
-        </Button>
-      </div>
-
-      {isLoading && <ProductSkeletons />}
-      {error && (
-        <div role="alert" className={`mt-6 ${errorBoxClass}`}>
-          {error.message}
-        </div>
-      )}
-      {products && products.length === 0 && (
-        <div className="mt-6 flex flex-col items-center gap-3 rounded-xl border border-dashed border-gray-300 bg-white px-6 py-10 text-center">
-          <span aria-hidden className="text-4xl">
-            📦
-          </span>
-          <p className="max-w-md text-sm text-gray-600">
-            Nothing tracked yet. Add a product with a photo or a store link and the app will research prices
-            near you.
-          </p>
-          <Button variant="primary" onClick={() => setAddOpen(true)}>
-            + Add your first product
-          </Button>
-        </div>
-      )}
-
-      <div className="mt-6 grid gap-4 md:grid-cols-2">
-        {products?.map((product) => (
-          <ProductCard key={product.id} product={product} onSchedule={setScheduleFor} />
-        ))}
-      </div>
-
-      {addOpen && <AddProductDialog onClose={() => setAddOpen(false)} />}
-      {scheduleFor && <ScheduleDialog product={scheduleFor} onClose={() => setScheduleFor(null)} />}
-    </AppShell>
-  );
+  return <Screen texts={texts} appName={appName} paths={STARTER_PATHS} />;
 };
 
 export const Route = createFileRoute("/")({
-  staticData: { landing: true },
-  component: TrackingPage,
+  beforeLoad: ({ context }) => {
+    const to = context.landingPath();
+
+    if (to !== undefined && to !== "" && to !== "/") {
+      // oxlint-disable-next-line typescript/only-throw-error -- TanStack Router's redirect is thrown, by design
+      throw redirect({ href: to });
+    }
+  },
+  component: Home,
 });

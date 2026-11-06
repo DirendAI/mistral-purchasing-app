@@ -4,7 +4,9 @@
 #
 # Discovered/activated by capability presence (the shipped project.json). The migration subcommands
 # drive Alembic from the app-local `packages/py/db` project this capability ships. `test-pg-contract`
-# runs the suites that need a live Postgres with pgvector and self-skips when none is installed. Every
+# runs the suites that need a live Postgres with pgvector and self-skips when none is installed. With
+# the testing capability, its root conftest.py runs them in a throwaway database created next to the
+# `DATABASE_URL` one (the role needs CREATEDB), so a running stack's tables survive. Every
 # `uv` call goes through tools/uv.sh, which pins the index and drops AGENT.
 set -euo pipefail
 . "${0%/*}/lib.sh"

@@ -64,8 +64,10 @@ coverage.xml
 /tmp/
 /temp/
 
-# Local application data (root-only, like logs/ above) and agent scratch files
-/ingest/
+# ./ingest is not ignored: it is the corpus Compose mirrors into the bucket, so it is committed.
+
+# Agent scratch files and playwright-cli output (snapshots, console logs; written where it runs)
 .omo
 .sisyphus/
 .scratch/
+.playwright-cli/

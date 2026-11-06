@@ -18,7 +18,9 @@ from utils.mistral import (
     caller_mistral_client,
     install_caller_credentials,
     mistral_api_url,
+    mistral_app_token,
     mistral_client,
+    mistral_credential_configured,
 )
 
 PROXY_URL = "https://gateway.test/v1/proxy"
@@ -83,6 +85,50 @@ def test_a_rotated_token_is_spent_from_the_next_call(monkeypatch: pytest.MonkeyP
     client = mistral_client()
     token_file.write_text("tok-after", encoding="utf-8")
     assert client.sdk_configuration.security().api_key == "tok-after"
+
+
+@pytest.mark.parametrize(
+    ("api_key", "token", "spent"),
+    [
+        pytest.param(APP_KEY, None, APP_KEY, id="key_only"),
+        pytest.param(None, "tok-worker", "tok-worker", id="token_file_only_as_on_a_deployed_worker"),
+        pytest.param(APP_KEY, "tok-worker", "tok-worker", id="token_file_wins_over_a_key"),
+    ],
+)
+def test_work_gated_on_the_apps_credential_runs_on_a_key_or_a_token_file(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, api_key: str | None, token: str | None, spent: str
+) -> None:
+    # Optional work checks for a credential before building a client; checking the key alone would
+    # turn it off on every deployed worker, where the platform reserves MISTRAL_API_KEY.
+    monkeypatch.setattr(mistral_clients.env, "mistral_api_key", api_key)
+    if token is not None:
+        token_file = tmp_path / "sa-token"
+        token_file.write_text(f"{token}\n", encoding="utf-8")
+        monkeypatch.setenv("MISTRAL_SA_TOKEN_PATH", str(token_file))
+    assert mistral_credential_configured()
+    assert mistral_app_token() == spent
+
+
+def test_with_no_credential_gated_work_is_off_and_a_plain_token_is_refused(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(mistral_clients.env, "mistral_api_key", None)
+    assert not mistral_credential_configured()
+    with pytest.raises(MistralNotConfiguredError):
+        mistral_app_token()
+
+
+def test_an_unreadable_token_file_is_refused_as_not_configured(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    monkeypatch.setenv("MISTRAL_SA_TOKEN_PATH", str(tmp_path / "not-mounted"))
+    with pytest.raises(MistralNotConfiguredError):
+        mistral_app_token()
+
+
+def test_a_plain_token_is_read_again_after_a_rotation(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    token_file = tmp_path / "sa-token"
+    token_file.write_text("tok-before", encoding="utf-8")
+    monkeypatch.setenv("MISTRAL_SA_TOKEN_PATH", str(token_file))
+    assert mistral_app_token() == "tok-before"
+    token_file.write_text("tok-after", encoding="utf-8")
+    assert mistral_app_token() == "tok-after"
 
 
 def test_without_a_key_background_work_still_builds_a_client_the_api_will_refuse(

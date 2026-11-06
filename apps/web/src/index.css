@@ -1,13 +1,5 @@
 @import "tailwindcss";
 
-@theme {
-  --color-brand: #fa500f;
-  --color-brand-dark: #d63f04;
-  --color-brand-soft: #fff3ec;
-
-  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-}
-
 @layer base {
   html,
   body {
@@ -15,45 +7,8 @@
   }
 
   body {
-    @apply bg-gray-50 font-sans text-gray-900 antialiased;
+    @apply antialiased;
   }
-
-  ::selection {
-    background-color: color-mix(in oklab, var(--color-brand) 25%, transparent);
-  }
-
-  :focus-visible {
-    outline: 2px solid var(--color-brand);
-    outline-offset: 2px;
-  }
-}
-
-@keyframes overlay-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes dialog-in {
-  from {
-    opacity: 0;
-    transform: translateY(6px) scale(0.98);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-
-.animate-overlay-in {
-  animation: overlay-in 120ms ease-out;
-}
-
-.animate-dialog-in {
-  animation: dialog-in 140ms ease-out;
 }
 
 /*
@@ -62,9 +17,7 @@
  */
 @media (prefers-reduced-motion: reduce) {
   .animate-pulse,
-  .animate-spin,
-  .animate-overlay-in,
-  .animate-dialog-in {
+  .animate-spin {
     animation: none;
   }
 }

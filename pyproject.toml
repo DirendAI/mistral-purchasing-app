@@ -3,9 +3,9 @@ name = "app-workspace"
 version = "0.0.1"
 requires-python = ">=3.12,<3.15"
 dependencies = [
-    "mistralai-capabilities-backend-fastapi==0.1.61",
-    "mistralai-capabilities-backend-workflows==0.1.61",
-    "mistralai-capabilities-deployment-apps==0.1.61",
+    "mistralai-capabilities-backend-fastapi==0.1.71",
+    "mistralai-capabilities-backend-workflows==0.1.71",
+    "mistralai-capabilities-deployment-apps==0.1.71",
 ]
 
 [tool.uv]
@@ -14,14 +14,10 @@ package = false
 # "the risk of dependency confusion attacks": it merges candidates across indexes and takes the
 # best version, so a public upload of an unclaimed private name outranks the real release.
 index-strategy = "first-index"
-# GHSA-537c-gmf6-5ccf: cryptography wheels below 48.0.1 statically link a vulnerable OpenSSL. Use an
-# override, not a constraint: every published mistralai caps `cryptography<47.0.0`, so a constraint
-# is unsatisfiable. The payload encoder only uses `AESGCM` and `InvalidTag`, unchanged in 48.x/49.x.
-#
 # `griffe` 1.x and `griffelib` 2.x both install the `griffe` module, so with both present the older
 # files overwrite the newer ones and `fastmcp.server` fails to import. `mistralai[agents]` caps
 # `griffe<2` and `fastmcp` needs `griffelib`. `griffe` 2.x is a thin package over `griffelib`.
-override-dependencies = ["cryptography>=48.0.1", "griffe>=2"]
+override-dependencies = ["griffe>=2"]
 # A universal lock only guarantees a version is selectable per platform, not that a wheel exists
 # there: uv checks wheel availability only for the platform the lock is taken on. This repo locks on
 # macOS but deploys linux/x86_64 and linux/aarch64, so all three must be installable from one lock.

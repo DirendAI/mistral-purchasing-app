@@ -7,6 +7,8 @@ import {
 import type { ReactNode } from "react";
 
 import { DEFAULT_APP_NAME } from "../app-name";
+import { useRootTexts } from "../root-screens";
+import { contributedRootScreens } from "../root-screens-source";
 
 import appCss from "../index.css?url";
 
@@ -22,22 +24,31 @@ export interface RouterContext {
  * The HTML document. Layout belongs in a layout route, not here: wrap pages in a pathless
  * `routes/_<name>.tsx` so a page can opt out of it by living outside that directory.
  *
- * `suppressHydrationWarning` covers attributes a script sets on `<html>` before React hydrates,
- * such as the theme class.
+ * It renders in the root screens' language and direction (`root-screens.tsx`), so the server's
+ * document already says which language it is in. `suppressHydrationWarning` covers attributes a
+ * script sets on `<html>` before React hydrates, such as the theme class.
  */
-const RootDocument = ({ children }: { children: ReactNode }) => (
-  <html lang="en" suppressHydrationWarning>
-    <head>
-      <HeadContent />
-    </head>
-    <body>
-      {children}
-      <Scripts />
-    </body>
-  </html>
-);
+const RootDocument = ({ children }: { children: ReactNode }) => {
+  const { lang, dir } = useRootTexts();
+
+  return (
+    <html lang={lang} dir={dir} suppressHydrationWarning>
+      <head>
+        <HeadContent />
+      </head>
+      <body>
+        {children}
+        <Scripts />
+      </body>
+    </html>
+  );
+};
 
 export const Route = createRootRouteWithContext<RouterContext>()({
+  // The locale the root screens speak (`root-screens.tsx`). The server resolves it per request and
+  // the browser hydrates with that answer, as the router carries `beforeLoad`'s context; in the
+  // browser it re-runs on each navigation and `router.invalidate()`, so a language switch shows.
+  beforeLoad: () => ({ locale: contributedRootScreens.resolveLocale() }),
   head: ({ match }) => ({
     meta: [
       { charSet: "utf-8" },

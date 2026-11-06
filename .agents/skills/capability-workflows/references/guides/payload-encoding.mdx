@@ -125,12 +125,43 @@ There are two modes:
 `full`: Encrypts every payload.
 `partial`: Encrypt only `EncryptedStrField` fields (see: `mistralai.workflows.models`)
 
-Set the following environment variables in your .env:
+Install the `mistralai[workflow-payload-encryption]` extra in every caller and worker
+environment; it supplies `cryptography`:
+
+```bash
+uv add "mistralai[workflow-payload-encryption]"
+```
+
+Set the following environment variables in your .env, on workers before execution:
 
 ```
 TEMPORAL_PAYLOAD_ENCRYPTION__MODE=full # or partial
 TEMPORAL_PAYLOAD_ENCRYPTION__MAIN_KEY=<YOUR_KEY_IN_HEX>
 ```
+
+Configure every caller too, including clients sending signals/updates or reading
+results. In generated apps, use `await get_client()` from
+`mistralai_capabilities.workflows.client`, which configures encryption from the app's
+settings. A standalone `Mistral` client needs `PayloadEncryptionConfig`,
+`WorkflowEncodingConfig` and `configure_workflow_encoding` from their real submodules.
+Build `payload_encryption` as a `PayloadEncryptionConfig` from runtime secrets, using
+the same mode, main key and any retained secondary key as the workers. Before the
+first workflow call, run:
+
+```python
+from mistralai.extra.workflows.encoding.config import WorkflowEncodingConfig
+from mistralai.extra.workflows.encoding.helpers import configure_workflow_encoding
+from mistralai.workflows.core.config.config import PayloadEncryptionConfig
+
+await configure_workflow_encoding(
+    WorkflowEncodingConfig(payload_encryption=payload_encryption),
+    client=client,
+)
+```
+
+Worker environment variables alone do not configure a standalone client.
+Keep keys in runtime secrets, outside payloads. If the deployment cannot provision
+encryption to every participant, stop before sending sensitive data.
 
 #### Key Rotation
 
@@ -150,16 +181,13 @@ TEMPORAL_PAYLOAD_ENCRYPTION__MAIN_KEY=<NEW_KEY_HERE>
 TEMPORAL_PAYLOAD_ENCRYPTION__SECONDARY_KEY=<OLD_KEY_HERE>
 ```
 
-#### 3. Wait for old workflows to Finish
+#### 3. Retain the old key
 
-Allow sufficient time (days or weeks, depending on your workflows) for all data encrypted with the old key to be fully processed.
+Never overwrite `SECONDARY_KEY` while any retained workflow history, result,
+replay or encrypted offloaded blob still needs it to decrypt. A completed workflow
+can still be replayed or have its result read, so retain old decryption keys while
+stored histories or encrypted offloaded payloads still need them; remove the key from
+every worker and client configuration only once no such data remains.
 
-#### 4. Remove the old Key
-
-Once you're sure no old data needs decrypting, delete the `SECONDARY_KEY` from your settings:
-
-```
-TEMPORAL_PAYLOAD_ENCRYPTION__MODE=full
-TEMPORAL_PAYLOAD_ENCRYPTION__MAIN_KEY=<NEW_KEY_HERE>
-## TEMPORAL_PAYLOAD_ENCRYPTION__SECONDARY_KEY=
-```
+If using payload offloading, verify encryption of the stored blobs separately;
+encrypting a blob reference does not encrypt its contents.

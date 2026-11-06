@@ -145,7 +145,7 @@ async def summarize(text: str) -> str:
     return resp.choices[0].message.content
 ```
 
-Construct the raw `mistralai.client.Mistral` only when you need something `get_mistral_client()` does not configure, and keep the `from mistralai.client import Mistral` import inside the activity that uses it: a module-level import pulls in `httpx`, which the determinism sandbox rejects while validating the workflow at startup (see [Limitations](./limitations)). `mistralai` is a namespace package, so the path is `mistralai.client`; `from mistralai import Mistral` does not work.
+Construct the raw `mistralai.client.Mistral` only when you need something `get_mistral_client()` does not configure, and keep the `from mistralai.client import Mistral` import inside the activity that uses it: a module-level import pulls in `httpx2`, which the determinism sandbox rejects while validating the workflow at startup (see [Limitations](./limitations)). `mistralai` is a namespace package, so the path is `mistralai.client`; `from mistralai import Mistral` does not work.
 
 Model calls and other I/O must run inside an activity, never in the workflow body; see [Limitations](./limitations) for the determinism and import rules.
 
@@ -242,7 +242,7 @@ build-backend = "hatchling.build"
 name = "acme-workflows"
 version = "0.1.0"
 dependencies = [
-    "mistralai-workflows>=3.15.0,<4.0.0",
+    "mistralai-workflows>=3.17.1,<4.0.0",
 ]
 ```
 

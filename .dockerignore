@@ -29,11 +29,12 @@ coverage
 .coverage*
 **/coverage.xml
 
-# Local data and agent scratch files are never needed in an image.
+# The corpus Compose mounts at runtime and agent scratch files are never needed in an image.
 ingest/
 .omo
 .sisyphus/
 .scratch/
+**/.playwright-cli
 
 # Secrets stay out of image layers; runtime configuration is injected by the selected launcher.
 **/.env

@@ -279,11 +279,6 @@ agent = workflows_mistralai.Agent(
 For remote MCP servers that speak the Streamable HTTP transport (`--transport http`),
 such as a self-hosted server behind an HTTP endpoint:
 
-> **Requires `mistralai>=2.8.0`.** The Streamable HTTP client ships in the `mistralai`
-> client from 2.8.0 (client-python#592). This plugin keeps a permissive floor
-> (`mistralai>=2.0.0`), so if you use `MCPStreamableHTTPConfig`, pin
-> `mistralai>=2.8.0` in your own project's dependencies.
-
 ```python
 import mistralai.workflows.plugins.mistralai as workflows_mistralai
 

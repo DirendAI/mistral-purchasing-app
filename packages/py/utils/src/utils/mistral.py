@@ -72,7 +72,25 @@ def _sa_token_path() -> str | None:
 
 def _token_file(path: str) -> Callable[[], str]:
     # Read on every request: the platform rotates the token file under a running worker.
-    return lambda: Path(path).read_text(encoding="utf-8").strip()
+    def read() -> str:
+        try:
+            return Path(path).read_text(encoding="utf-8").strip()
+        except OSError as error:
+            raise MistralNotConfiguredError(f"The service-account token file {path} cannot be read") from error
+
+    return read
+
+
+def _app_credential() -> str | Callable[[], str] | None:
+    # The one place that decides what the app spends as itself: the worker's token file, which the
+    # platform mounts where it reserves MISTRAL_API_KEY, then the key.
+    token_path = _sa_token_path()
+    if token_path:
+        return _token_file(token_path)
+    return env.mistral_api_key or None
+
+
+_NO_APP_CREDENTIAL = "Neither MISTRAL_API_KEY nor MISTRAL_SA_TOKEN_PATH is configured"
 
 
 def _caller_token() -> str:
@@ -80,6 +98,28 @@ def _caller_token() -> str:
     if credentials is None:
         raise MistralNotConfiguredError("Nothing supplies a caller credential, so there is no caller to act for")
     return credentials.token
+
+
+def mistral_credential_configured() -> bool:
+    """Whether the app has a credential of its own: a worker's token file, or ``MISTRAL_API_KEY``.
+
+    Gate optional work on this rather than on the key: a deployed worker has the token file only,
+    because the platform reserves ``MISTRAL_API_KEY`` there.
+    """
+    return _app_credential() is not None
+
+
+def mistral_app_token() -> str:
+    """The app's own bearer token as of now, for a client that takes a plain string, not the SDK.
+
+    The token file is read on each call, so build such a client per use: one kept past a rotation
+    goes on spending the old token. Raises :class:`MistralNotConfiguredError` when there is none, or
+    when the token file cannot be read.
+    """
+    credential = _app_credential()
+    if credential is None:
+        raise MistralNotConfiguredError(_NO_APP_CREDENTIAL)
+    return credential if isinstance(credential, str) else credential()
 
 
 def mistral_api_url() -> str:
@@ -105,10 +145,11 @@ def mistral_client(*, server_url: str | None = None, retry_config: OptionalNulla
     not an error here: building a client stays safe wherever the key is optional, and the API rejects
     the first call with a 401. The empty string is deliberate; ``None`` would make the SDK's telemetry
     hook raise on that call instead, and the SDK would fall back to reading ``MISTRAL_API_KEY`` itself.
+    A token file that is set but cannot be read raises :class:`MistralNotConfiguredError` on each call.
     """
-    token_path = _sa_token_path()
-    api_key = _token_file(token_path) if token_path else env.mistral_api_key or ""
-    return _new_client(api_key, env.mistral_base_url if server_url is None else server_url, retry_config)
+    return _new_client(
+        _app_credential() or "", env.mistral_base_url if server_url is None else server_url, retry_config
+    )
 
 
 @lru_cache(maxsize=1)
@@ -126,7 +167,7 @@ def caller_mistral_client() -> Mistral:
     """
     credentials = caller_credentials()
     if credentials is None:
-        if not env.mistral_api_key and not _sa_token_path():
-            raise MistralNotConfiguredError("Neither MISTRAL_API_KEY nor MISTRAL_SA_TOKEN_PATH is configured")
+        if not mistral_credential_configured():
+            raise MistralNotConfiguredError(_NO_APP_CREDENTIAL)
         return mistral_client()
     return _caller_client(credentials.server_url)

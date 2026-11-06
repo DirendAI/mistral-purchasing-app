@@ -6,10 +6,13 @@
 #
 # `generate` dumps apps/api/openapi.json from the app's routes and regenerates apps/web/src/api/generated.
 #
-# `--check` is the drift gate: it regenerates both and fails if either differs from what was on disk
-# before. It compares against the working tree, not the git index, so a correct regeneration that is
-# not staged yet passes locally; CI checks out a clean tree, where the two are the same thing. The
-# regenerated files are left in place, so a stale client is fixed by the run that reports it.
+# `--check` is the drift gate: it regenerates both into a scratch copy of the `apps/` layout and fails
+# if either differs from what is on disk. It compares against the working tree, not the git index, so
+# a correct regeneration that is not staged yet passes locally; CI checks out a clean tree, where the
+# two are the same thing. It writes nothing while they match: `bun run check` type-checks the web app
+# in parallel, and hey-api empties its output folder before writing it, so regenerating the live client
+# made that type-check see it missing. On drift the regenerated files replace the stale ones, so a
+# stale client is fixed by the run that reports it.
 #
 # The scaffold ships no client: it depends on which API capabilities the app selected, and a client
 # generated for every capability of the registry made each one that adds a route edit this
@@ -17,42 +20,66 @@
 # client is drift like a stale one, so `--check` generates it and fails.
 set -euo pipefail
 
+ROOT="$PWD"
 SPEC="apps/api/openapi.json"
 CLIENT="apps/web/src/api/generated"
 
+# Its binary is called by path, under node like `bunx` runs it, because `bunx` from a scratch
+# directory would download it instead.
+OPENAPI_TS="$ROOT/node_modules/.bin/openapi-ts"
+
+# Writes the spec and the client under $1, which is `apps` or a scratch copy of its layout. hey-api
+# resolves the config's input, output and `runtimeConfigPath` from the working directory, so running
+# it from $1/web generates the same files, relative imports included, wherever $1 is.
 generate() {
-  bash tools/uv.sh run --no-sync gen-openapi "$SPEC"
-  (cd apps/web && bunx @hey-api/openapi-ts)
+  local apps="$1"
+  if [ ! -x "$OPENAPI_TS" ]; then
+    echo "gen-types.sh: $OPENAPI_TS is missing; run \`bun install\` first" >&2
+    exit 1
+  fi
+  mkdir -p "$apps/api" "$apps/web"
+  bash tools/uv.sh run --no-sync gen-openapi "$apps/api/openapi.json"
+  (cd "$apps/web" && "$OPENAPI_TS" -f "$ROOT/apps/web/openapi-ts.config.ts")
 }
 
-BEFORE=""
-cleanup() { [ -z "$BEFORE" ] || rm -rf "$BEFORE"; }
+# Swaps in the client at $1: staged next to the live one (a dot folder, which the web type-check's
+# globs skip) so the live one is missing only between `rm` and `mv`.
+replace_client() {
+  local staged
+  staged="$(dirname "$CLIENT")/.generated.new"
+  rm -rf "$staged"
+  cp -R "$1" "$staged"
+  rm -rf "$CLIENT"
+  mv "$staged" "$CLIENT"
+}
 
+# The spec and the client are compared and replaced separately: replacing the client briefly removes
+# it, so only a client that drifted is replaced.
 check() {
-  local had_spec=0 drift=0
-  BEFORE="$(mktemp -d)"
-  trap cleanup EXIT
-  if [ -d "$CLIENT" ]; then
-    cp -R "$CLIENT" "$BEFORE/client"
-  else
-    mkdir "$BEFORE/client"
-  fi
-  if [ -f "$SPEC" ]; then
-    cp "$SPEC" "$BEFORE/openapi.json"
-    had_spec=1
-  fi
+  local drift=0 scratch
+  scratch="$(mktemp -d)"
+  # shellcheck disable=SC2064 # expand now: $scratch is local to this function
+  trap "rm -rf '$scratch'" EXIT
+  generate "$scratch/apps"
+  local spec="$scratch/$SPEC" client="$scratch/$CLIENT"
 
-  generate
-
-  diff -ru "$BEFORE/client" "$CLIENT" >"$BEFORE/diff" || drift=1
+  if [ ! -d "$CLIENT" ]; then
+    echo "$CLIENT is missing" >"$scratch/diff"
+    replace_client "$client"
+    drift=1
+  elif ! diff -ru "$CLIENT" "$client" >"$scratch/diff"; then
+    replace_client "$client"
+    drift=1
+  fi
   # A spec that was never written has nothing to drift from; the client is the contract.
-  if [ "$had_spec" = 1 ]; then
-    diff -u "$BEFORE/openapi.json" "$SPEC" >>"$BEFORE/diff" || drift=1
+  if [ -f "$SPEC" ] && ! diff -u "$SPEC" "$spec" >>"$scratch/diff"; then
+    drift=1
   fi
+  cmp -s "$spec" "$SPEC" || cp "$spec" "$SPEC"
   if [ "$drift" = 1 ]; then
-    head -n 60 "$BEFORE/diff"
-    echo "The generated API client did not match the API's routes (first 60 diff lines above)." >&2
-    echo "It has been regenerated in place; review the change and commit it:" >&2
+    head -n 60 "$scratch/diff"
+    echo "The API spec or the generated client did not match the API's routes (first 60 diff lines above)." >&2
+    echo "They have been regenerated in place; review the change and commit it:" >&2
     echo "  git add $SPEC $CLIENT" >&2
     exit 1
   fi
@@ -60,7 +87,7 @@ check() {
 }
 
 case "${1:-}" in
-  "") generate ;;
+  "") generate apps ;;
   --check) check ;;
   *)
     echo "usage: gen-types.sh [--check]" >&2

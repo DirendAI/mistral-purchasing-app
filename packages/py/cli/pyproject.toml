@@ -13,7 +13,7 @@ dependencies = [
     "typer>=0.27",
     "utils",
     "env",
-    "mistralai>=2.9.4",
+    "mistralai>=3.6.0",
     "structlog>=25.5.0",
 ]
 

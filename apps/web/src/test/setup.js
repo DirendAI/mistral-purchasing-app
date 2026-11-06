@@ -141,6 +141,54 @@ const scrollElementTo = function scrollElementTo(...args) {
 // oxlint-disable-next-line typescript/unbound-method -- only checks whether jsdom defines it
 window.Element.prototype.scrollTo ??= scrollElementTo;
 
+/**
+ * jsdom has no `matchMedia`; the design system's layouts read their breakpoints through it. This one
+ * answers as a screen wider than every breakpoint: a `min-width` (or `width >`, `width >=`) query
+ * matches, any other (`max-width`, `prefers-reduced-motion`, …) does not.
+ * @param {string} media The media query.
+ * @returns {MediaQueryList} A list that never changes, so its listeners are never called.
+ */
+const matchMedia = (media) =>
+  Object.assign(new EventTarget(), {
+    matches: /min-width|width\s*>/u.test(media),
+    media,
+    onchange: null,
+    addListener: () => {
+      /* no-op: the stand-in screen never resizes */
+    },
+    removeListener: () => {
+      /* no-op: the stand-in screen never resizes */
+    },
+  });
+
+// On the window's prototype, not the window: a test that stands in its own `matchMedia` and then
+// deletes it uncovers this one rather than leaving the next file without any.
+if (!("matchMedia" in window)) {
+  Object.defineProperty(Object.getPrototypeOf(window), "matchMedia", {
+    configurable: true,
+    value: matchMedia,
+    writable: true,
+  });
+}
+
+// jsdom lays nothing out, so nothing resizes: charts and dialogs observe their size through this.
+globalThis.ResizeObserver ??= class ResizeObserver {
+  // oxlint-disable-next-line class-methods-use-this -- nothing to observe
+  observe() {
+    /* no-op: jsdom has no layout */
+  }
+
+  // oxlint-disable-next-line class-methods-use-this -- nothing to observe
+  unobserve() {
+    /* no-op: jsdom has no layout */
+  }
+
+  // oxlint-disable-next-line class-methods-use-this -- nothing to observe
+  disconnect() {
+    /* no-op: jsdom has no layout */
+  }
+};
+
 Object.defineProperty(globalThis, "PointerEvent", {
   configurable: true,
   writable: true,

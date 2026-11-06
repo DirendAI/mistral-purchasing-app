@@ -27,6 +27,26 @@ const routerWith = (
   });
 };
 
+/** A `/cases` layout whose index route, at `/cases/`, claims `landing`. */
+const casesIndexRouter = () => {
+  const rootRoute = createRootRoute();
+
+  const cases = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/cases",
+  });
+
+  const casesIndex = createRoute({
+    getParentRoute: () => cases,
+    path: "/",
+    staticData: { landing: true },
+  });
+
+  return createRouter({
+    routeTree: rootRoute.addChildren([cases.addChildren([casesIndex])]),
+  });
+};
+
 describe("landingPath", () => {
   test("is the route that declares staticData.landing", () => {
     expect(
@@ -65,6 +85,10 @@ describe("landingPath", () => {
     expect(
       landingPath(routerWith({ path: "/a", landing: false }))
     ).toBeUndefined();
+  });
+
+  test("is an index route's URL, not its `/cases/` fullPath the router would redirect away", () => {
+    expect(landingPath(casesIndexRouter())).toBe("/cases");
   });
 
   test("is undefined when no route declares it, so `/` renders its own page", () => {

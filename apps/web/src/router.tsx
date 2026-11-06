@@ -4,6 +4,10 @@ import { createRouter } from "@tanstack/react-router";
 import { resolveAppName } from "./app-name";
 import { landingPath } from "./landing";
 import { landingFallbacks } from "./landing-fallbacks";
+import { NotFound } from "./not-found";
+import { RootScreensContext } from "./root-screens";
+import { contributedRootScreens } from "./root-screens-source";
+import { RouteError } from "./route-error";
 import type { RouterContext } from "./routes/__root";
 import { routeTree } from "./routeTree.gen";
 import { scrollRestorationOptions } from "./scroll-root";
@@ -32,14 +36,14 @@ export const getRouter = () => {
       context.appName = dehydrated.appName;
     },
     ...scrollRestorationOptions,
-    defaultNotFoundComponent: () => (
-      <div className="flex min-h-full flex-col items-center justify-center gap-1 p-8 text-center">
-        <p className="text-2xl font-semibold tracking-tight">Page not found</p>
-        <p className="text-sm text-gray-500">The page you are looking for does not exist.</p>
-      </div>
-    ),
+    defaultErrorComponent: RouteError,
+    defaultNotFoundComponent: NotFound,
     Wrap: ({ children }) => (
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+      <QueryClientProvider client={queryClient}>
+        <RootScreensContext value={contributedRootScreens}>
+          {children}
+        </RootScreensContext>
+      </QueryClientProvider>
     ),
   });
 

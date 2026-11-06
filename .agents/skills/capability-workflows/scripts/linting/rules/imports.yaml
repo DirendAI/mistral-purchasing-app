@@ -106,7 +106,7 @@ rules:
               ...
     message: >-
       Avoid a top-level import from `mistralai.client` (the raw SDK). It pulls in
-      `httpx`, which the determinism sandbox rejects when it re-imports the workflow
+      `httpx2`, which the determinism sandbox rejects when it re-imports the workflow
       module — the worker then fails to validate the workflow at startup. Prefer the
       Mistral AI plugin activities (`mistralai_chat_complete`, `mistralai_ocr`, ...);
       if you genuinely need the raw client, import it inside the activity that uses it.

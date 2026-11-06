@@ -8,6 +8,10 @@ sidebar_position: 8
 
 Connectors let workflows call external services (GitHub, Notion, Slack, ...) using credentials managed by the Mistral Connectors platform. The workflow **declares** which connectors it needs; the platform resolves credentials and drives any OAuth flow automatically. The same code works whether the connector uses a bearer/PAT token or OAuth2. **You never put secrets in workflow code**.
 
+### How a connector call reaches the API
+
+HTTP connector requests route through the platform's connector gateway: the gateway resolves the upstream URL and injects the auth headers from credentials stored platform-side, and refreshes OAuth tokens there — the secret never enters workflow code, payloads or histories. The gateway runs in-cluster, so this works the same in managed cloud and in MAIS on-prem / Private Cloud, where it resolves credentials from the deployment's in-cluster integrations service. The supported outbound auth types are `oauth2`, `bearer`, `none`, `github_app` and `slack_app`. On `on_behalf_of=True` runs the gateway resolves the triggering user's stored credentials; otherwise the worker's own identity is used (see [Acting as the user (on-behalf-of)](#acting-as-the-user-on-behalf-of)).
+
 Connectors ship in the Mistral plugin:
 
 ```bash

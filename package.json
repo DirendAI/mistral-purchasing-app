@@ -26,7 +26,11 @@
     "typescript": "catalog:"
   },
   "//overrides": "Every capability package peer-depends on `@tanstack/react-query` at `^5` and dev-depends on it at the same range. The CLI vendors them as `file:` deps, so bun installs those dev deps nested, and `^5` floats to a newer patch than the exact version apps/web pins -- two versions, so nothing hoists. Two copies is not a size problem: each has its own `QueryClientContext`, so a hook inside a capability package throws `No QueryClient set` under the app's own provider. Pin it here, next to the other cross-package singletons.",
+  "//overrides-diffs": "`@pierre/diffs` is held at 1.6.2 because 1.6.3 (npm latest since 2026-11-03) was published with unresolved `workspace:*` and `catalog:` dependencies, which fail `bun install`. It arrives only through mistral-design-system's UI library, at `^1.5.1`, and only an override reaches a transitive dependency. Inert without that capability. Drop this pin once npm serves a fixed release past 1.6.3.",
   "overrides": {
+    "@pierre/diffs": "1.6.2",
+    "tailwindcss": "4.3.4",
+    "@tailwindcss/vite": "4.3.4",
     "react": "19.2.7",
     "react-dom": "19.2.7",
     "@tanstack/react-query": "5.101.4",
@@ -40,15 +44,16 @@
   },
   "packageManager": "bun@1.4.0",
   "dependencies": {
-    "@mistralai-capabilities/backend-fastapi": "0.1.61",
-    "@mistralai-capabilities/backend-workflows": "0.1.61",
-    "@mistralai-capabilities/base-core": "0.1.61",
-    "@mistralai-capabilities/database-postgres": "0.1.61",
-    "@mistralai-capabilities/deployment-apps": "0.1.61",
-    "@mistralai-capabilities/deployment-apps-fastapi": "0.1.61",
-    "@mistralai-capabilities/feature-fastapi-postgres": "0.1.61",
-    "@mistralai-capabilities/feature-fastapi-tanstack-start": "0.1.61",
-    "@mistralai-capabilities/feature-fastapi-workflows": "0.1.61",
-    "@mistralai-capabilities/frontend-tanstack-start": "0.1.61"
-  }
+    "@mistralai-capabilities/backend-fastapi": "0.1.71",
+    "@mistralai-capabilities/backend-workflows": "0.1.71",
+    "@mistralai-capabilities/base-core": "0.1.71",
+    "@mistralai-capabilities/database-postgres": "0.1.71",
+    "@mistralai-capabilities/deployment-apps": "0.1.71",
+    "@mistralai-capabilities/deployment-apps-fastapi": "0.1.71",
+    "@mistralai-capabilities/feature-fastapi-postgres": "0.1.71",
+    "@mistralai-capabilities/feature-fastapi-tanstack-start": "0.1.71",
+    "@mistralai-capabilities/feature-fastapi-workflows": "0.1.71",
+    "@mistralai-capabilities/frontend-tanstack-start": "0.1.71"
+  },
+  "//overrides-tailwind": "`tailwindcss@4.3.5` (npm latest) declares an optional dependency on `@tailwindcss/oxide@4.3.5`, which was never published (latest oxide is 4.3.4), so `bun install` fails to resolve it. Pin tailwindcss and its Vite plugin to 4.3.4, whose oxide counterpart exists. Drop the pin once npm serves tailwindcss past 4.3.5 with a published oxide."
 }

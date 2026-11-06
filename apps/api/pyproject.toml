@@ -4,7 +4,7 @@ version = "0.1.0"
 requires-python = ">=3.12,<3.15"
 dependencies = [
     "utils",
-    "mistralai>=2.9.4",
+    "mistralai>=3.6.0",
     "db",
     "env",
     "workflows-app",
