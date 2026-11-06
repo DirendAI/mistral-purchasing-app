@@ -8,18 +8,8 @@ them into structured findings, and stores the run and its findings in Postgres. 
 and model call happens inside an activity; the entrypoint only sequences them.
 """
 
-import json
 from datetime import timedelta
-from pathlib import Path
 from typing import Any
-
-
-def _app_name() -> str:
-    for parent in Path(__file__).resolve().parents:
-        manifest = parent / "mistral.json"
-        if manifest.is_file():
-            return json.loads(manifest.read_text())["name"]
-    return "mistral-purchasing-app"
 
 import mistralai.workflows as workflows
 from mistralai.workflows.plugins.mistralai import (
@@ -34,9 +24,10 @@ from pydantic import BaseModel, Field
 VISION_MODEL = "mistral-small-latest"
 PARSE_MODEL = "mistral-large-latest"
 
-# The managed agent the app's agent module (apps/agent) is registered under at deploy time:
-# agent-<app name from mistral.json>.
-RESEARCH_AGENT_NAME = f"agent-{_app_name()}"
+# The managed agent the app's agent module (apps/agent) is registered under at deploy time.
+# Must equal agent-<app name in mistral.json>; kept a constant because the workflow module
+# is imported inside the Temporal sandbox, which forbids file I/O at import time.
+RESEARCH_AGENT_NAME = "agent-mistral-purchasing-app"
 
 
 class PriceResearchInput(BaseModel):
